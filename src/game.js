@@ -878,7 +878,7 @@ function checkEra() { const s = eraStatus(); const was = G.eraReady; G.eraReady 
 function advanceEra() {
   const s = eraStatus(); if (!s || !s.ready) return;
   pay(ERA_REQ[G.era].res); G.era++; G.eraReady = false;
-  SND.play('era'); UI.banner(`The ${ERA_REQ[G.era - 1].to} Era`, G.era === 1 ? 'Cottages, farms, quarries and shrines are now available.' : 'Stone houses, mines, markets, temples — and the Great Tower.');
+  SND.play('era'); UI.banner(`The ${ERA_REQ[G.era - 1].to} era`, G.era === 1 ? 'Cottages, farms, quarries, wells and shrines are ready to build.' : 'Stone houses, mines, markets and temples are ready, and so is the Great Tower.');
   addLog(`Your people enter the ${ERA_REQ[G.era - 1].to} era!`, 'good');
   G.res.favor += 10;
   UI.buildToolbar();

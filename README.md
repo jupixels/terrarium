@@ -12,10 +12,10 @@ A small civilization-building game set in a voxel diorama inside a glass tank. L
 - **Lose:** everyone dies, or the average mood stays below 22% for a full day.
 - **Win:** finish the Great Tower.
 
-Controls: left click uses the selected tool · right-drag orbits · middle-drag pans · wheel zooms · `Space` pauses · `T` changes speed · `?` opens help.
+Controls: drag with the left mouse button to orbit, right-drag to pan, scroll to zoom. Pick something from the build tray, point at the ground and press **E** to build or use it (hold E to paint land). Left-click villagers or buildings to inspect them. `Tab` switches tray tabs, `Space` pauses, `T` changes speed, `?` opens help.
 
 ## Development
-`index.html` is a self-contained build (no dependencies; WebGL2). The source lives in `src/`:
+`index.html` is the built game (WebGL2, no dependencies) and loads its sounds and music from `audio/`. Because it fetches audio, run it from a web server (for example `python3 -m http.server`) rather than opening the file directly. The source lives in `src/`:
 - `engine.js`: voxel world, terrain generation, mesher, WebGL renderer, camera
 - `game.js`: simulation (villagers, jobs, buildings, water, fire, seasons, eras)
 - `main.js`: UI, input, audio, main loop
@@ -24,4 +24,4 @@ Controls: left click uses the selected tool · right-drag orbits · middle-drag 
 After editing, rebuild with `python3 src/build.py`.
 
 ## Credits
-Sound effects by [Kenney](https://kenney.nl) (CC0), via the game-sounds library.
+Sound effects, ambience and music were generated with [ElevenLabs](https://elevenlabs.io). `src/sfx.js` is the audio manager from the game-sounds library.

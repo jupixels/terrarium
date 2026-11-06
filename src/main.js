@@ -1,23 +1,35 @@
 // ===================== audio =====================
+// Sound effects, ambience and music generated with ElevenLabs; files live in audio/.
+const AUDIO = {
+  click: ['click', 0.35], place: ['place', 0.6], hammer: [['hammer1', 'hammer2'], 0.32], complete: ['complete', 0.5],
+  chop: ['chop', 0.4], mine: [['mine1', 'mine2'], 0.35], thunder: ['thunder', 0.85], error: ['error', 0.45],
+  notify: ['notify', 0.45], birth: ['birth', 0.45], bless: ['bless', 0.55], era: ['era', 0.7], alarm: ['alarm', 0.45],
+  death: ['death', 0.5], dig: [['dig1', 'dig2'], 0.4], victory: ['victory', 0.75], collapse: ['collapse', 0.7],
+  a_rain: ['rain', 1], a_fire: ['fire', 1], a_wind: ['wind', 1], a_birds: ['birds', 1], a_night: ['night', 1],
+  m_day: ['music_day', 1], m_night: ['music_night', 1],
+};
 const SND = {
-  sfx: null, muted: false, vol: 0.7, amb: null,
+  sfx: null, muted: false, musicOn: true, vol: 0.7, loops: null, ready: false,
   async init() {
-    try { this.sfx = new SFX({}); await this.sfx.load(window.SFX_DATA); this.sfx.setVolume('master', this.muted ? 0 : this.vol); this.initAmb(); } catch (e) { console.warn(e); }
+    try {
+      this.sfx = new SFX({ base: 'audio/' });
+      const map = {}; for (const k in AUDIO) { const [f, v] = AUDIO[k]; map[k] = { src: Array.isArray(f) ? f.map(x => x + '.mp3') : f + '.mp3', volume: v }; }
+      this.sfx.setVolume('master', this.muted ? 0 : this.vol); this.sfx.setVolume('music', this.musicOn ? 0.42 : 0);
+      await this.sfx.load(map);
+      this.loops = {}; for (const k of ['a_rain', 'a_fire', 'a_wind', 'a_birds', 'a_night']) this.loops[k] = this.sfx.loop(k, { volume: 0, fadeIn: 0.01 });
+      this.loops.m_day = this.sfx.loop('m_day', { volume: 0, fadeIn: 0.01, bus: 'music' }); this.loops.m_night = this.sfx.loop('m_night', { volume: 0, fadeIn: 0.01, bus: 'music' });
+      this.ready = true;
+    } catch (e) { console.warn(e); }
   },
-  play(n, o) { if (this.sfx && !this.muted) try { this.sfx.play(n, o || {}); } catch (e) {} },
+  play(n, o) { if (this.sfx && this.ready && !this.muted) try { this.sfx.play(n, o || {}); } catch (e) {} },
   setMuted(m) { this.muted = m; if (this.sfx) this.sfx.setVolume('master', m ? 0 : this.vol); },
+  setMusic(on) { this.musicOn = on; if (this.sfx) this.sfx.setVolume('music', on ? 0.42 : 0); },
   setVol(v) { this.vol = v; if (this.sfx && !this.muted) this.sfx.setVolume('master', v); },
-  initAmb() { // no rain/fire/wind recordings in the library: synthesized filtered noise beds
-    const ctx = this.sfx.ctx, len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    const mk = (type, f, q) => { const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(this.sfx.master); s.start(); return g; };
-    this.amb = { rain: mk('lowpass', 1400, 0.4), fire: mk('bandpass', 700, 1.2), wind: mk('lowpass', 320, 0.7) };
-  },
-  updAmb(rain, fire, wind) {
-    if (!this.amb) return; const t = this.sfx.ctx.currentTime;
-    this.amb.rain.gain.setTargetAtTime(rain * 0.22, t, 0.4);
-    this.amb.fire.gain.setTargetAtTime(fire * (0.1 + Math.random() * 0.12), t, 0.05);
-    this.amb.wind.gain.setTargetAtTime(wind * 0.08, t, 0.8);
+  updAmb(o) {
+    if (!this.ready) return; const L = this.loops, f = 1.2;
+    L.a_rain.setVolume(o.rain * 0.55, f); L.a_fire.setVolume(o.fire * 0.4, 0.4); L.a_wind.setVolume(o.wind * 0.18, f);
+    L.a_birds.setVolume(o.birds * 0.35, f); L.a_night.setVolume(o.crickets * 0.16, f);
+    L.m_day.setVolume(o.musicDay, 2.5); L.m_night.setVolume(o.musicNight, 2.5);
   },
 };
 
@@ -76,140 +88,253 @@ function resIcon(k) {
 
 // ===================== UI =====================
 const $ = id => document.getElementById(id);
+const SVGI = {
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3l5-4v13l-5-4H4z" fill="currentColor" stroke="none"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9.5h3l5-4v13l-5-4H4z" fill="currentColor" stroke="none"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+  help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg>',
+  cursor: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3.5l13 7.2-5.6 1.6 3.4 6-2.6 1.4-3.3-6L6 17.6z"/></svg>',
+  hammer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4M12.5 7.5l-8 8a1.4 1.4 0 0 0 2 2l8-8"/><path d="M11 4.5c2-1.5 4.5-1.5 6.5.5l2 2-3 3-1.5-1.5"/></svg>',
+  note: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6.2a1 1 0 0 1 .78-.98l9-2A1 1 0 0 1 20 4.2v11.3" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="6.5" cy="17.5" rx="3" ry="2.4"/><ellipse cx="17.5" cy="15.5" rx="3" ry="2.4"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+  house: '<svg class="ic" viewBox="0 0 26 26"><path d="M4 12.5L13 5l9 7.5" fill="none" stroke="#d6b266" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 11.5V21h13v-9.5" fill="#3a4a35" stroke="#d6b266" stroke-width="1.6"/><rect x="11" y="15" width="4" height="6" fill="#f2bd55"/></svg>',
+  rain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 15a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" fill="currentColor" stroke="none" opacity=".85"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></svg>',
+  bolt: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2L5 13.5h6L9.5 22 19 9.5h-6z"/></svg>',
+  snow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></svg>',
+};
+function moodFace(m) {
+  const c = m >= 55 ? '#a8d06f' : m >= 35 ? '#f2bd55' : '#f26b4c';
+  const k = (m - 50) / 50 * 3.2;
+  return `<svg class="ic" viewBox="0 0 26 26"><circle cx="13" cy="13" r="10.5" fill="${c}"/><circle cx="9.5" cy="11" r="1.4" fill="#1a1a12"/><circle cx="16.5" cy="11" r="1.4" fill="#1a1a12"/><path d="M8.5 ${16.5 - k * 0.3} Q13 ${16.5 + k} 17.5 ${16.5 - k * 0.3}" fill="none" stroke="#1a1a12" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+}
+const CATS = [
+  { id: 'homes', name: 'Homes', items: ['tent', 'cottage', 'stonehouse'] },
+  { id: 'food', name: 'Food', items: ['dock', 'farm'] },
+  { id: 'industry', name: 'Industry', items: ['lumber', 'quarry', 'storehouse', 'mine'] },
+  { id: 'community', name: 'Community', items: ['well', 'shrine', 'market', 'temple'] },
+  { id: 'wonder', name: 'Wonder', items: ['tower'] },
+  { id: 'powers', name: 'Powers', items: ['rain', 'bolt', 'bless', 'raise', 'lower'] },
+];
+const SEASON_COL = ['#9fd36c', '#f0c75a', '#e0823f', '#a9d6f2'];
+function arcPath(cx, cy, r, a0, a1) {
+  const p = a => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  const [x0, y0] = p(a0), [x1, y1] = p(a1);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
 const UI = {
-  tool: 'inspect', brush: 2, sel: null, hover: null, hoverV: null, logDirty: true, tools: [], follow: false, demoPending: null,
+  tool: 'inspect', cat: 'homes', brush: 2, sel: null, hover: null, logDirty: true, follow: false, demoPending: null, lastLogTop: null,
   init() {
-    for (const k of ['food', 'wood', 'stone', 'ore', 'favor', 'pop']) { const el = $('ri-' + k); el.innerHTML = ''; el.appendChild(resIcon(k)); }
     this.icons = {};
     for (const t of BUILD_ORDER) this.icons[t] = bldIcon(t);
-    for (const p of ['inspect', 'rain', 'bolt', 'bless', 'raise', 'lower', 'demolish']) this.icons[p] = powerIcon(p);
-    this.buildToolbar();
+    for (const p of ['rain', 'bolt', 'bless', 'raise', 'lower']) this.icons[p] = powerIcon(p);
+    this.resImg = {}; for (const k of RES) this.resImg[k] = resIcon(k).toDataURL();
+    // resource strip
+    const names = { food: 'Food', wood: 'Wood', stone: 'Stone', ore: 'Ore', favor: 'Favor' };
+    let h = '';
+    for (const k of RES) h += `<div class="chip" id="rc-${k}"><img src="${this.resImg[k]}" alt=""><div><div class="v" id="rv-${k}">0</div><div class="n">${names[k]}</div></div>${k !== 'favor' ? `<div class="meter"><i id="rm-${k}"></i></div>` : ''}</div>`;
+    h += `<div class="rule"></div><div class="chip" id="rc-pop">${SVGI.house}<div><div class="v" id="rv-pop">0</div><div class="n">People</div></div><div class="meter"><i id="rm-pop"></i></div></div>`;
+    h += `<div class="chip" id="rc-mood"><span id="ri-mood"></span><div><div class="v" id="rv-mood">0%</div><div class="n">Mood</div></div></div>`;
+    $('hud-res').innerHTML = h;
+    $('rc-mood').title = 'Average mood. If it stays below 22% for a whole day, your people leave.';
+    $('rc-favor').title = 'Favor: earned by happy villagers and priests, spent on god powers.';
+    // controls
+    $('btn-pause').innerHTML = SVGI.pause; $('btn-sound').innerHTML = SVGI.sound; $('btn-help').innerHTML = SVGI.help;
     $('btn-pause').onclick = () => this.togglePause();
-    $('btn-speed').onclick = () => this.cycleSpeed();
+    $('speed').onclick = e => { const s = e.target.dataset.s; if (s) this.setSpeed(+s); };
     $('btn-sound').onclick = () => this.toggleMute();
+    $('btn-music').innerHTML = SVGI.note; $('btn-music').onclick = () => { SND.setMusic(!SND.musicOn); this.syncCtl(); };
     $('volume').oninput = e => SND.setVol(e.target.value / 100);
-    $('btn-help').onclick = () => $('help').classList.toggle('open');
-    $('help').onclick = () => $('help').classList.remove('open');
+    $('btn-help').onclick = () => $('help').classList.toggle('on');
+    $('help').onclick = () => $('help').classList.remove('on');
     $('size-minus').onclick = () => this.setBrush(this.brush - 1);
     $('size-plus').onclick = () => this.setBrush(this.brush + 1);
     $('goals').addEventListener('click', e => { if (e.target.id === 'btn-era') advanceEra(); });
     $('insp').addEventListener('click', e => this.inspClick(e));
+    const side = document.querySelectorAll('.tool2');
+    side[0].innerHTML = `${SVGI.cursor}Select<kbd>Esc</kbd>`; side[1].innerHTML = `${SVGI.hammer}Demolish<kbd>X</kbd>`;
+    side.forEach(b => b.onclick = () => this.setTool(b.dataset.tool));
+    $('tabs').onclick = e => { const c = e.target.closest('button'); if (c) { this.cat = c.dataset.cat; this.buildToolbar(); SND.play('click', { volume: 0.4 }); } };
+    $('slots').addEventListener('mouseleave', () => $('tip').classList.remove('on'));
+    this.buildToolbar();
   },
+  catItems(c) { return CATS.find(x => x.id === (c || this.cat)).items; },
+  locked(id) { return BDEF[id] && BDEF[id].era > G.era ? BDEF[id].era : 0; },
+  costOf(id) { return BDEF[id] ? BDEF[id].cost : POWERS[id] ? { favor: POWERS[id].favor } : {}; },
+  nameOf(id) { return BDEF[id] ? BDEF[id].name : POWERS[id] ? POWERS[id].name : id; },
   buildToolbar() {
-    const el = $('tools'); el.innerHTML = ''; this.tools = [];
-    const add = (id, label, desc, cost, locked, group) => {
-      const b = document.createElement('button'); b.className = 'tool' + (locked ? ' locked' : '') + (this.tool === id ? ' active' : '');
-      b.appendChild(this.icons[id]); b.dataset.tool = id;
-      const n = this.tools.length; if (n < 20) { const s = document.createElement('span'); s.className = 'key'; s.textContent = n < 10 ? (n + 1) % 10 : '⇧' + (n - 9) % 10; b.appendChild(s); }
-      if (locked) { const s = document.createElement('span'); s.className = 'lock'; s.textContent = ERAS[locked]; b.appendChild(s); }
-      b.onmouseenter = () => this.showTip(id, label, desc, cost, locked, b); b.onmouseleave = () => $('tip').classList.remove('show');
-      b.onclick = () => { if (locked) { this.toast(`Unlocks in the ${ERAS[locked]} era`); SND.play('error'); return; } this.setTool(id); };
-      if (group) { const sp = document.createElement('span'); sp.className = 'gsep'; el.appendChild(sp); }
-      el.appendChild(b); this.tools.push(id);
-    };
-    add('inspect', 'Inspect', 'Click villagers or buildings to see what they’re up to.', null, 0);
-    let first = true;
-    for (const t of BUILD_ORDER) { const d = BDEF[t]; add(t, d.name, d.desc, d.cost, d.era > G.era ? d.era : 0, first); first = false; }
-    first = true;
-    for (const p in POWERS) { add(p, POWERS[p].name, POWERS[p].desc, { favor: POWERS[p].favor }, 0, first); first = false; }
-    add('demolish', 'Demolish', 'Tear down a building. Refunds half the cost (all of it if unfinished).', null, 0, true);
-    $('size').style.display = (this.tool === 'raise' || this.tool === 'lower') ? 'flex' : 'none';
+    $('tabs').innerHTML = CATS.map(c => `<button data-cat="${c.id}" class="${c.id === this.cat ? 'on' : ''} ${c.items.every(i => this.locked(i)) ? 'dim' : ''}">${c.name}</button>`).join('') + '<span class="hint"><kbd>Tab</kbd> next tab, <kbd>E</kbd> build at cursor</span>';
+    const el = $('slots'); el.innerHTML = '';
+    this.catItems().forEach((id, i) => {
+      const b = document.createElement('button'); const lk = this.locked(id);
+      b.className = 'slot' + (lk ? ' locked' : '') + (this.tool === id ? ' on' : ''); b.dataset.tool = id;
+      const cv = document.createElement('canvas'); cv.width = cv.height = 64; cv.getContext('2d').drawImage(this.icons[id], 0, 0); b.appendChild(cv);
+      const cost = this.costOf(id);
+      b.insertAdjacentHTML('beforeend', `<span class="key">${i + 1}</span><span class="nm">${this.nameOf(id)}</span><span class="cost">${Object.entries(cost).map(([k, v]) => `<span data-r="${k}" data-n="${v}"><img src="${this.resImg[k]}" alt="${k}">${v}${id === 'raise' || id === 'lower' ? '/block' : ''}</span>`).join('')}</span>${lk ? `<span class="lock">${ERAS[lk]} era</span>` : ''}`);
+      b.onmouseenter = () => this.showTip(id, b); b.onfocus = () => this.showTip(id, b);
+      b.onclick = () => { if (lk) { this.toast(`Reach the ${ERAS[lk]} era to unlock the ${this.nameOf(id)}`); SND.play('error'); return; } this.setTool(this.tool === id ? 'inspect' : id); };
+      el.appendChild(b);
+    });
+    document.querySelectorAll('.tool2').forEach(b => b.classList.toggle('on', b.dataset.tool === this.tool));
+    $('brush').classList.toggle('on', this.tool === 'raise' || this.tool === 'lower');
+    this.refreshCosts();
   },
-  showTip(id, label, desc, cost, locked, el) {
-    const tip = $('tip');
-    let html = `<b>${label}</b>`;
-    if (cost) html += ' <span class="cost">' + Object.entries(cost).map(([k, v]) => `<span class="${(G.res[k] || 0) >= v ? '' : 'short'}">${v} ${k}</span>`).join(' · ') + '</span>';
-    const def = BDEF[id];
-    if (def && def.house) html += ` <span class="tag">houses ${def.house}</span>`; if (def && def.jobs) html += ` <span class="tag">${def.jobs} job${def.jobs > 1 ? 's' : ''}</span>`;
-    html += `<div class="desc">${desc}</div>`; if (locked) html += `<div class="short">Unlocks in the ${ERAS[locked]} era</div>`;
-    tip.innerHTML = html; tip.classList.add('show');
-    const r = el.getBoundingClientRect(); tip.style.left = clamp(r.left + r.width / 2, 170, innerWidth - 170) + 'px';
+  refreshCosts() { for (const s of document.querySelectorAll('.slot .cost span')) s.classList.toggle('no', (G.res[s.dataset.r] || 0) < +s.dataset.n); },
+  showTip(id, el) {
+    const def = BDEF[id], tip = $('tip'); const lk = this.locked(id);
+    const tags = [];
+    if (def && def.house) tags.push(`Houses ${def.house}`); if (def && def.jobs) tags.push(`${def.jobs} worker${def.jobs > 1 ? 's' : ''}`); if (def && def.hours) tags.push(`${def.hours}h to build`);
+    const short = Object.entries(this.costOf(id)).filter(([k, v]) => (G.res[k] || 0) < v).map(([k, v]) => `Need ${Math.ceil(v - G.res[k])} more ${k}`);
+    tip.innerHTML = `<h4>${this.nameOf(id)}</h4><p>${def ? def.desc : POWERS[id].desc}</p><div class="tags">${tags.map(t => `<span>${t}</span>`).join('')}${lk ? `<span class="no">Unlocks in the ${ERAS[lk]} era</span>` : short.map(t => `<span class="no">${t}</span>`).join('')}</div>`;
+    const r = el.getBoundingClientRect(), tr = $('tray').getBoundingClientRect();
+    tip.style.left = clamp(r.left + r.width / 2 - 140, 8, innerWidth - 288) + 'px'; tip.style.top = ''; tip.style.bottom = (innerHeight - tr.top + 10) + 'px';
+    tip.classList.add('on');
   },
   setTool(id) {
     this.tool = id; this.demoPending = null;
-    for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === id);
-    $('size').style.display = (id === 'raise' || id === 'lower') ? 'flex' : 'none';
-    SND.play('click', { volume: 0.5 });
+    if (id !== 'inspect' && id !== 'demolish') { const c = CATS.find(c => c.items.includes(id)); if (c && c.id !== this.cat) this.cat = c.id; }
+    this.buildToolbar();
+    SND.play('click', { volume: 0.45 });
   },
   setBrush(n) { this.brush = clamp(n, 1, 4); $('size-val').textContent = this.brush; },
-  togglePause() { G.paused = !G.paused; $('btn-pause').textContent = G.paused ? 'Resume' : 'Pause'; $('btn-pause').classList.toggle('active', G.paused); },
-  cycleSpeed() { G.speed = G.speed === 1 ? 2 : G.speed === 2 ? 4 : 1; $('btn-speed').textContent = 'Time ×' + G.speed; },
-  toggleMute() { SND.setMuted(!SND.muted); $('btn-sound').textContent = SND.muted ? 'Sound off' : 'Sound on'; },
-  toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(this._tt); this._tt = setTimeout(() => t.classList.remove('show'), 2200); },
-  banner(title, sub) { const b = $('banner'); b.innerHTML = `<h3>${title}</h3><p>${sub}</p>`; b.classList.add('show'); clearTimeout(this._bt); this._bt = setTimeout(() => b.classList.remove('show'), 4500); },
+  syncCtl() {
+    $('btn-pause').innerHTML = G.paused ? SVGI.play : SVGI.pause; $('btn-pause').classList.toggle('on', G.paused); $('btn-pause').title = G.paused ? 'Resume (Space)' : 'Pause (Space)';
+    for (const b of document.querySelectorAll('#speed button')) b.classList.toggle('on', +b.dataset.s === G.speed);
+    $('btn-sound').innerHTML = SND.muted ? SVGI.mute : SVGI.sound; $('btn-music').classList.toggle('off', !SND.musicOn); $('btn-music').title = SND.musicOn ? 'Turn music off' : 'Turn music on';
+  },
+  togglePause() { G.paused = !G.paused; this.syncCtl(); },
+  setSpeed(s) { G.speed = s; if (G.paused) G.paused = false; this.syncCtl(); },
+  cycleSpeed() { this.setSpeed(G.speed === 1 ? 2 : G.speed === 2 ? 4 : 1); },
+  toggleMute() { SND.setMuted(!SND.muted); this.syncCtl(); },
+  toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => t.classList.remove('on'), 2400); },
+  banner(title, sub) { const b = $('banner'); b.innerHTML = `<h3>${title}</h3><p>${sub}</p>`; b.classList.add('on'); clearTimeout(this._bt); this._bt = setTimeout(() => b.classList.remove('on'), 5000); },
   showEnd() {
     const o = G.over, s = G.stats, day = dayOf();
-    $('end').innerHTML = `<div class="card ${o.win ? 'win' : 'lose'}"><div class="eyebrow">${o.win ? 'Victory' : 'Game over'}</div><h2>${o.win ? 'Your people reached the sky' : 'Your civilization has collapsed'}</h2><p>${o.reason}</p>
-      <div class="stats"><div><b>${day + 1}</b><span>days</span></div><div><b>${ERAS[G.era]}</b><span>era reached</span></div><div><b>${s.peak}</b><span>peak population</span></div><div><b>${s.built}</b><span>buildings</span></div><div><b>${s.deaths}</b><span>villagers lost</span></div></div>
-      <button id="btn-again">Play again</button>${o.win ? '<button id="btn-watch" class="ghost">Keep watching</button>' : ''}</div>`;
-    $('end').classList.add('open');
-    $('btn-again').onclick = () => { $('end').classList.remove('open'); startGame((Math.random() * 1e6) | 0); };
-    if ($('btn-watch')) $('btn-watch').onclick = () => { $('end').classList.remove('open'); };
+    const e = $('end'); e.className = 'on ' + (o.win ? 'win' : 'lose');
+    e.innerHTML = `<div class="card glass framed"><h2>${o.win ? 'Your people reached the sky' : 'Your civilization has collapsed'}</h2><p>${o.reason}</p>
+      <div class="stats"><div><b>${day + 1}</b><span>days</span></div><div><b>${ERAS[G.era]}</b><span>era</span></div><div><b>${s.peak}</b><span>peak population</span></div><div><b>${s.built}</b><span>buildings</span></div><div><b>${s.deaths}</b><span>lost</span></div></div>
+      <div class="btns">${o.win ? '<button id="btn-watch">Keep watching</button>' : ''}<button id="btn-again" class="primary">Start a new valley</button></div></div>`;
+    $('btn-again').onclick = () => { e.className = ''; startGame((Math.random() * 1e6) | 0); };
+    if ($('btn-watch')) $('btn-watch').onclick = () => { e.className = ''; };
+  },
+  drawDial() {
+    const h = hourOf(), dd = dayOf(), yf = ((dd % 12) + h / 24) / 12, se = seasonOf();
+    const cx = 34, cy = 34; let s = '';
+    for (let i = 0; i < 4; i++) { const a0 = -Math.PI / 2 + i * Math.PI / 2 + 0.07, a1 = a0 + Math.PI / 2 - 0.14; s += `<path d="${arcPath(cx, cy, 30.5, a0, a1)}" stroke="${SEASON_COL[i]}" stroke-width="4" fill="none" stroke-linecap="round" opacity="${i === se ? 1 : 0.28}"/>`; }
+    const ya = -Math.PI / 2 + yf * Math.PI * 2;
+    s += `<circle cx="${cx + 30.5 * Math.cos(ya)}" cy="${cy + 30.5 * Math.sin(ya)}" r="3.4" fill="#f3d999" stroke="#1a1a12" stroke-width="1.2"/>`;
+    const day = smooth(-0.12, 0.22, Math.sin((h - 6) / 12 * Math.PI));
+    const sky = `rgb(${lerp(22, 140, day) | 0},${lerp(30, 196, day) | 0},${lerp(58, 236, day) | 0})`;
+    const th = (h - 12) / 24 * Math.PI * 2, sx = cx + 14 * Math.sin(th), sy = cy - 14 * Math.cos(th), mx = cx - 14 * Math.sin(th), my = cy + 14 * Math.cos(th);
+    s += `<defs><clipPath id="dc"><circle cx="${cx}" cy="${cy}" r="22"/></clipPath><radialGradient id="sg"><stop offset="0" stop-color="#fff3c4"/><stop offset=".55" stop-color="#ffd76a"/><stop offset="1" stop-color="#ffd76a" stop-opacity="0"/></radialGradient></defs>`;
+    s += `<circle cx="${cx}" cy="${cy}" r="24.5" fill="#0d120f" stroke="#d6b266" stroke-width="1.4"/>`;
+    s += `<g clip-path="url(#dc)"><rect x="0" y="0" width="68" height="68" fill="${sky}"/>`;
+    if (day < 0.6) for (const [a, b] of [[24, 22], [40, 18], [31, 27], [45, 28], [20, 30]]) s += `<circle cx="${a}" cy="${b}" r=".7" fill="#fff" opacity="${(1 - day) * 0.8}"/>`;
+    s += `<circle cx="${sx}" cy="${sy}" r="8" fill="url(#sg)"/><circle cx="${sx}" cy="${sy}" r="3.8" fill="#ffe08a"/>`;
+    s += `<circle cx="${mx}" cy="${my}" r="3.2" fill="#e3e9f6"/><circle cx="${mx + 1.4}" cy="${my - 0.8}" r="2.6" fill="${sky}"/>`;
+    s += `<rect x="0" y="${cy}" width="68" height="34" fill="${se === 3 ? '#cfd9e3' : '#26361f'}"/><path d="M12 ${cy} H56" stroke="#d6b266" stroke-width=".8" opacity=".7"/></g>`;
+    $('dial').innerHTML = s;
+    $('date').textContent = `Year ${Math.floor(dd / 12) + 1}, ${SEASONS[se]}`;
+    $('clock').textContent = `Day ${dd % 3 + 1} of 3, ${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 6) * 10).padStart(2, '0')}`;
+    const w = $('weather'); let wh = '', bad = false;
+    if (G.rain) { wh = SVGI.rain + (G.rain.heavy ? 'Heavy storm' : 'Raining'); bad = G.rain.heavy; }
+    else if (G.storm) { wh = SVGI.bolt + 'Thunderstorm'; bad = true; }
+    else if (G.frozen) wh = SVGI.snow + 'Lake frozen';
+    if (w.dataset.h !== wh) { w.innerHTML = wh.replace(/<svg /g, '<svg width="14" height="14" '); w.dataset.h = wh; }
+    w.classList.toggle('on', !!wh); w.classList.toggle('bad', bad);
   },
   update() {
     const r = G.res, pop = G.vill.length, cap = housingCap(), avg = avgMood();
-    for (const k of RES) { $('rv-' + k).textContent = Math.floor(r[k]); if (k !== 'favor') { const full = r[k] >= storeCap(k); $('rc-' + k).classList.toggle('full', full); $('rc-' + k).title = `${k[0].toUpperCase() + k.slice(1)}: ${Math.floor(r[k])} / ${storeCap(k)} storage${full ? ' — FULL, build a Storehouse' : ''}`; } }
-    $('rv-pop').textContent = `${pop}/${cap}`; $('rc-pop').classList.toggle('warn', pop > cap);
-    $('rc-food').classList.toggle('warn', r.food < pop * 2);
-    const mf = avg >= 70 ? '😊' : avg >= 50 ? '🙂' : avg >= 35 ? '😐' : avg >= 22 ? '😟' : '😫';
-    $('rv-mood').textContent = `${mf} ${Math.round(avg)}%`; $('rc-mood').classList.toggle('warn', avg < 35);
-    const h = hourOf(), hh = Math.floor(h), mm = Math.floor((h % 1) * 60 / 10) * 10;
-    const wx = G.rain ? (G.rain.heavy ? ' · ⛈ Storm' : ' · 🌧 Rain') : G.storm ? ' · ⚡ Thunder' : G.frozen ? ' · ❄' : '';
-    $('hud').textContent = `Year ${Math.floor(dayOf() / 12) + 1} · ${SEASONS[seasonOf()]} · Day ${dayOf() % 3 + 1}/3 · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${wx}`;
+    for (const k of RES) {
+      $('rv-' + k).textContent = Math.floor(r[k]);
+      if (k !== 'favor') { const c = storeCap(k), full = r[k] >= c; $('rm-' + k).style.width = Math.min(100, r[k] / c * 100) + '%'; $('rc-' + k).classList.toggle('full', full);
+        $('rc-' + k).title = `${Math.floor(r[k])} of ${c} storage${full ? '. Full: build a Storehouse to hold more.' : ''}`; }
+    }
+    $('rc-food').classList.toggle('low', r.food < pop * 2);
+    $('rv-pop').textContent = `${pop}/${cap}`; $('rm-pop').style.width = Math.min(100, pop / Math.max(1, cap) * 100) + '%';
+    $('rc-pop').classList.toggle('low', pop > cap); $('rc-pop').title = pop > cap ? `${pop - cap} villager${pop - cap > 1 ? 's have' : ' has'} no home` : `${cap - pop} free bed${cap - pop === 1 ? '' : 's'}`;
+    const mi = Math.round(avg / 5); if ($('ri-mood').dataset.m != mi) { $('ri-mood').innerHTML = moodFace(avg); $('ri-mood').dataset.m = mi; }
+    $('rv-mood').textContent = Math.round(avg) + '%'; $('rc-mood').classList.toggle('low', avg < 35);
+    this.drawDial(); this.refreshCosts();
     // goals
-    const st = eraStatus(); let gh = `<div class="era">${ERAS[G.era]} era</div>`;
-    if (st) { gh += `<div class="gt">Reach the ${st.to} era</div>`; for (const it of st.items) gh += `<div class="gi ${it.ok ? 'ok' : ''}"><span>${it.ok ? '✓' : '○'}</span>${it.label}<em>${Math.min(it.cur, it.need)}/${it.need}</em></div>`;
-      if (st.ready) gh += `<button id="btn-era">Advance to ${st.to} era</button>`; }
-    else { const tw = G.blds.find(b => b.type === 'tower'); gh += `<div class="gt">Build the Great Tower to win</div>`;
-      gh += tw ? `<div class="bar"><i style="width:${Math.min(100, tw.progress / BDEF.tower.hours * 100)}%"></i></div><div class="gi">${tw.done ? 'Complete!' : Math.floor(tw.progress / BDEF.tower.hours * 100) + '% built'}</div>` : `<div class="gi">○ ${Object.entries(BDEF.tower.cost).map(([k, v]) => v + ' ' + k).join(', ')}</div>`; }
-    if (G.lowMoodH > 0) gh += `<div class="danger">⚠ Despair: ${24 - G.lowMoodH}h until collapse</div>`;
+    const st = eraStatus(); let gh = '';
+    if (st) {
+      gh += `<h2>Toward the ${st.to} era</h2><div class="sub">Meet every goal, then advance</div>`;
+      for (const it of st.items) gh += `<div class="req ${it.ok ? 'ok' : ''}"><span class="tick"></span><span>${it.label}</span><span class="cnt">${Math.min(it.cur, it.need)}/${it.need}</span><span class="bar"><i style="width:${Math.min(100, it.cur / it.need * 100)}%"></i></span></div>`;
+      if (st.ready) gh += `<button id="btn-era">Advance to the ${st.to} era</button>`;
+    } else {
+      const tw = G.blds.find(b => b.type === 'tower'); const p = tw ? Math.min(100, tw.progress / BDEF.tower.hours * 100) : 0;
+      gh += `<h2>Raise the Great Tower</h2><div class="sub">${tw ? (tw.done ? 'Complete' : 'Under construction') : 'Build it from the Wonder tab to win'}</div><div class="bigbar"><i style="width:${p}%"></i></div>`;
+      if (!tw) gh += Object.entries(BDEF.tower.cost).map(([k, v]) => `<div class="req ${G.res[k] >= v ? 'ok' : ''}"><span class="tick"></span><span>${v} ${k}</span><span class="cnt">${Math.min(v, Math.floor(G.res[k]))}/${v}</span></div>`).join('');
+      else gh += `<div class="req"><span></span><span>${Math.floor(p)}% built</span><span class="cnt">${tw.workers.length} builders</span></div>`;
+    }
+    if (G.lowMoodH > 0) gh += `<div class="despair"><b>Your people are in despair.</b> They leave in ${24 - G.lowMoodH} hours unless mood rises above 22%.</div>`;
     if ($('goals').dataset.h !== gh) { $('goals').innerHTML = gh; $('goals').dataset.h = gh; }
-    if (this.logDirty) { this.logDirty = false; $('log').innerHTML = G.log.slice(0, 7).map((l, i) => `<div class="${l.kind}" style="opacity:${1 - i * 0.11}">${l.msg}</div>`).join(''); }
+    // chronicle
+    if (this.logDirty) {
+      this.logDirty = false; const top = G.log[0];
+      const items = G.log.slice(0, 5).reverse();
+      $('log').innerHTML = items.map((l, i) => `<div class="e ${l.kind} ${l === top && top !== this.lastLogTop ? 'new' : ''}" style="opacity:${0.4 + 0.6 * (i + 1) / items.length}">${l.msg}</div>`).join('');
+      this.lastLogTop = top;
+    }
     this.updInsp();
   },
+  portrait(v) {
+    const sc = JOB_COL[v.slot ? v.slot.kind : 'none'] || JOB_COL.none, sk = [lerp(0.95, 0.55, v.skin), lerp(0.78, 0.4, v.skin), lerp(0.62, 0.28, v.skin)];
+    return isoIcon([[0, 0, 0, { c: [0.22, 0.2, 0.26] }], [0, 1, 0, { c: sc }], [0, 2, 0, { c: sk }]], 64);
+  },
   updInsp() {
-    const s = this.sel, el = $('insp'); let h = '';
+    const s = this.sel, el = $('insp'); let h = '', key = '';
+    const meter = (p, c) => `<span class="m"><i style="width:${clamp(p, 0, 100)}%;background:${c}"></i></span>`;
     if (s && s.v && G.vill.includes(s.v)) {
       const v = s.v; const job = v.slot ? (JOB_NAME[v.slot.kind] || 'Worker') : 'Forager';
-      const mood = Math.round(v.mood), mc = mood >= 55 ? '#7bd88f' : mood >= 30 ? '#f2c14e' : '#ff6b6b';
-      h = `<h3>${v.name}</h3><div class="sub">${job}${v.slot ? ' at the ' + BDEF[v.slot.b.type].name : ''}</div>
-        <div class="row">Doing<b>${v.act}</b></div>
-        <div class="row">Mood<b style="color:${mc}">${mood}%</b></div><div class="bar"><i style="width:${mood}%;background:${mc}"></i></div>
-        <div class="row">Health<b>${Math.round(v.health)}%</b></div>
-        <div class="row">Hunger<b>${v.missed ? v.missed + ' missed meal' + (v.missed > 1 ? 's' : '') : 'Fed'}</b></div>
-        <div class="row">Home<b>${v.home ? BDEF[v.home.type].name : '<span class="short">Homeless</span>'}</b></div>
-        ${v.carry ? `<div class="row">Carrying<b>${v.carry.n} ${v.carry.type}</b></div>` : ''}
-        <div class="btns"><button data-a="follow" class="${this.follow ? 'active' : ''}">${this.follow ? 'Following' : 'Follow'}</button></div>`;
+      const mood = Math.round(v.mood), mc = mood >= 55 ? 'var(--moss)' : mood >= 30 ? 'var(--amber)' : 'var(--ember)';
+      key = 'v' + v.id + job;
+      h = `<div class="ih"><span class="pslot"></span><div><h3>${v.name}</h3><div class="role">${job}${v.slot ? ' at the ' + BDEF[v.slot.b.type].name : ''}</div></div></div>
+        <div class="stat"><span>Now</span><b>${v.act}</b></div>
+        <div class="stat"><span>Mood</span><b>${mood}%</b>${meter(mood, mc)}</div>
+        <div class="stat"><span>Health</span><b>${Math.round(v.health)}%</b>${meter(v.health, 'var(--sky)')}</div>
+        <div class="stat"><span>Meals</span><b class="${v.missed ? 'warnline' : ''}">${v.missed ? v.missed + ' missed' : 'Fed'}</b></div>
+        <div class="stat"><span>Home</span><b class="${v.home ? '' : 'warnline'}">${v.home ? BDEF[v.home.type].name : 'Homeless'}</b></div>
+        ${v.carry ? `<div class="stat"><span>Carrying</span><b>${v.carry.n} ${v.carry.type}</b></div>` : ''}
+        <div class="acts"><button data-a="follow" class="${this.follow ? 'on' : ''}">${this.follow ? 'Stop following' : 'Follow'}</button></div>`;
     } else if (s && s.b && G.blds.includes(s.b)) {
-      const b = s.b, def = BDEF[b.type];
-      h = `<h3>${def.name}</h3>`;
-      if (!b.done) { const p = Math.min(100, b.progress / def.hours * 100); h += `<div class="sub">Under construction</div><div class="bar"><i style="width:${p}%"></i></div><div class="row">Progress<b>${Math.floor(p)}%</b></div><div class="row">Builders<b>${b.workers.length}</b></div>`; }
+      const b = s.b, def = BDEF[b.type]; key = 'b' + b.id;
+      h = `<div class="ih"><span class="pslot"></span><div><h3>${def.name}</h3><div class="role">${!b.done ? 'Under construction' : def.house ? 'Home' : def.jobs ? 'Workplace' : 'Building'}</div></div></div>`;
+      if (!b.done) { const p = Math.min(100, b.progress / def.hours * 100); h += `<div class="stat"><span>Built</span><b>${Math.floor(p)}%</b>${meter(p, 'var(--brass)')}</div><div class="stat"><span>Builders</span><b>${b.workers.length}</b></div>`; }
       else {
-        h += `<div class="sub">${def.desc}</div>`;
-        if (def.house) h += `<div class="row">Residents<b>${b.residents.length}/${def.house}</b></div><div class="names">${b.residents.map(v => v.name).join(', ') || '—'}</div>`;
-        if (def.jobs) h += `<div class="row">Workers<b>${b.workers.length}/${def.jobs}</b></div><div class="names">${b.workers.map(v => v.name).join(', ') || (b.paused ? 'Paused' : 'Waiting for workers')}</div>`;
-        if (b.crops) { const ripe = Array.from(b.crops).filter(c => c >= 3).length, avg = Array.from(b.crops).reduce((a, c) => a + c, 0) / 21 / 3; h += `<div class="row">Crops<b>${seasonOf() === 3 ? 'Dormant' : Math.round(avg * 100) + '% grown'}</b></div><div class="row">Ready to harvest<b>${ripe}</b></div>`; }
-        if (b.health < 1) h += `<div class="row">Condition<b class="short">${Math.round(b.health * 100)}%</b></div>`;
-        if (b.flooded) h += `<div class="short">⚠ Flooding!</div>`;
+        h += `<div class="idesc">${def.desc}</div>`;
+        if (def.house) h += `<div class="stat"><span>Residents</span><b>${b.residents.length} of ${def.house}</b><span class="names">${b.residents.map(v => v.name).join(', ') || 'Nobody yet'}</span></div>`;
+        if (def.jobs) h += `<div class="stat"><span>Workers</span><b>${b.workers.length} of ${def.jobs}</b><span class="names">${b.workers.map(v => v.name).join(', ') || (b.paused ? 'Work is paused' : 'Waiting for free villagers')}</span></div>`;
+        if (b.crops) { const arr = Array.from(b.crops), ripe = arr.filter(c => c >= 3).length, g = arr.reduce((a, c) => a + c, 0) / 21 / 3 * 100; h += `<div class="stat"><span>Crops</span><b>${seasonOf() === 3 ? 'Dormant' : Math.round(g) + '% grown'}</b>${meter(g, 'var(--moss)')}</div><div class="stat"><span>Ready to harvest</span><b>${ripe}</b></div>`; }
+        if (b.health < 1) h += `<div class="stat"><span>Condition</span><b class="warnline">${Math.round(b.health * 100)}%</b>${meter(b.health * 100, 'var(--ember)')}</div>`;
+        if (b.flooded) h += `<div class="stat"><span class="warnline">Flooding</span><b class="warnline">Drain it with Lower Land</b></div>`;
       }
-      if (b.type !== 'campfire') h += `<div class="btns">${(def.jobs || !b.done) ? `<button data-a="pause">${b.paused ? 'Resume work' : 'Pause work'}</button>` : ''}<button data-a="demolish" class="danger">${this.demoPending === b ? 'Confirm demolish' : 'Demolish'}</button></div>`;
-    } else { this.sel = null; }
-    el.style.display = h ? 'block' : 'none';
-    if (el.dataset.h !== h) { el.innerHTML = h; el.dataset.h = h; }
+      if (b.type !== 'campfire') h += `<div class="acts">${(def.jobs || !b.done) ? `<button data-a="pause">${b.paused ? 'Resume work' : 'Pause work'}</button>` : ''}<button data-a="demolish" class="danger ${this.demoPending === b ? 'arm' : ''}">${this.demoPending === b ? 'Click to confirm' : 'Demolish'}</button></div>`;
+    } else this.sel = null;
+    if (h) h = `<button class="iclose" data-a="close" aria-label="Close">${SVGI.close}</button>` + h;
+    el.classList.toggle('on', !!h);
+    if (el.dataset.h !== h) {
+      el.innerHTML = h; el.dataset.h = h;
+      const ps = el.querySelector('.pslot');
+      if (ps) { const c = s.v ? this.portrait(s.v) : (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const ic = this.icons[s.b.type]; if (ic) cv.getContext('2d').drawImage(ic, 0, 0); else cv.getContext('2d').drawImage(isoIcon(BDEF[s.b.type].tmpl(1).map(([x, y, z, t]) => [x, y, z, t])), 0, 0); return cv; })(); ps.replaceWith(c); }
+    }
   },
   inspClick(e) {
-    const a = e.target.dataset && e.target.dataset.a; if (!a || !this.sel) return;
+    const btn = e.target.closest('button'); const a = btn && btn.dataset.a; if (!a || !this.sel) return;
+    if (a === 'close') { this.sel = null; this.follow = false; }
     if (a === 'follow') this.follow = !this.follow;
     if (a === 'pause' && this.sel.b) { this.sel.b.paused = !this.sel.b.paused; assignJobs(); }
     if (a === 'demolish' && this.sel.b) { if (this.demoPending === this.sel.b) { demolish(this.sel.b); this.sel = null; this.demoPending = null; SND.play('place'); } else this.demoPending = this.sel.b; }
-    SND.play('click', { volume: 0.5 }); this.updInsp();
+    SND.play('click', { volume: 0.45 }); this.updInsp();
   },
 };
 
 // ===================== input =====================
 const canvas = document.getElementById('view');
-const inp = { drag: null, mx: 0, my: 0, paint: false, paintT: 0, down: false };
+const inp = { drag: null, mx: -1, my: -1, eHeld: false, paintT: 0, moved: 0 };
 function pickAt(px, py) {
+  if (px < 0) return { hit: null, v: null };
   const r = cam.ray(px, py, canvas.clientWidth, canvas.clientHeight);
   const hit = raycast(r.o, r.d, true);
   let hv = null, best = 1e9;
@@ -223,20 +348,23 @@ function pickAt(px, py) {
   return { hit, v: hv };
 }
 function ghostOrigin(type, hit) { const d = BDEF[type]; return [hit.x - Math.floor((d.w - 1) / 2), hit.z - Math.floor((d.d - 1) / 2)]; }
+function selectAt() {
+  const { hit, v } = pickAt(inp.mx, inp.my);
+  if (v) { UI.sel = { v }; UI.follow = false; SND.play('click', { volume: 0.5 }); }
+  else if (hit && buildingAt(hit.x, hit.z)) { UI.sel = { b: buildingAt(hit.x, hit.z) }; UI.follow = false; SND.play('click', { volume: 0.5 }); }
+  else UI.sel = null;
+  UI.demoPending = null; UI.updInsp();
+}
 function useTool(first) {
   if (!G || G.over) return;
-  const { hit, v } = pickAt(inp.mx, inp.my);
   const t = UI.tool;
-  if (t === 'inspect') {
-    if (v) { UI.sel = { v }; UI.follow = false; SND.play('click'); }
-    else if (hit && buildingAt(hit.x, hit.z)) { UI.sel = { b: buildingAt(hit.x, hit.z) }; UI.follow = false; SND.play('click'); }
-    else UI.sel = null;
-    UI.demoPending = null; UI.updInsp(); return;
-  }
+  if (t === 'inspect') { if (first) selectAt(); return; }
+  const { hit } = pickAt(inp.mx, inp.my);
   if (!hit) return;
   if (t === 'demolish') {
-    const b = buildingAt(hit.x, hit.z); if (!b || b.type === 'campfire') return;
-    if (UI.demoPending === b) { demolish(b); UI.demoPending = null; SND.play('place'); } else { UI.demoPending = b; UI.toast('Click again to demolish the ' + BDEF[b.type].name); }
+    if (!first) return;
+    const b = buildingAt(hit.x, hit.z); if (!b || b.type === 'campfire') { UI.toast('Point at a building, then press E to demolish it'); return; }
+    if (UI.demoPending === b) { demolish(b); UI.demoPending = null; SND.play('place'); } else { UI.demoPending = b; UI.toast(`Press E again to demolish the ${BDEF[b.type].name}`); }
     return;
   }
   if (BDEF[t]) {
@@ -247,9 +375,8 @@ function useTool(first) {
     const [x0, z0] = ghostOrigin(t, hit);
     const info = footprintInfo(t, x0, z0);
     if (info.bad) { UI.toast(info.bad); SND.play('error'); return; }
-    if (!canAfford(def.cost)) { UI.toast('Not enough ' + Object.keys(def.cost).filter(k => G.res[k] < def.cost[k]).join(' and ')); SND.play('error'); return; }
+    if (!canAfford(def.cost)) { UI.toast('Not enough ' + Object.keys(def.cost).filter(k => G.res[k] < def.cost[k]).join(' or ')); SND.play('error'); return; }
     placeBuilding(t, x0, z0); SND.play('place');
-    if (!inp.shift) {/* keep tool for repeated placement */}
     return;
   }
   if (POWERS[t]) {
@@ -261,40 +388,43 @@ function useTool(first) {
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);
-  inp.mx = e.offsetX; inp.my = e.offsetY; inp.sx = e.clientX; inp.sy = e.clientY; inp.shift = e.shiftKey;
-  if (e.button === 2 || (e.button === 0 && e.altKey)) inp.drag = 'orbit';
-  else if (e.button === 1) { inp.drag = 'pan'; e.preventDefault(); }
-  else if (e.button === 0) {
-    if (e.pointerType === 'touch' && UI.tool === 'inspect') { inp.drag = 'touch'; inp.moved = 0; return; }
-    inp.down = true; useTool(true); inp.paintT = 0;
-  }
-  inp.lx = e.clientX; inp.ly = e.clientY;
+  inp.mx = e.offsetX; inp.my = e.offsetY; inp.lx = e.clientX; inp.ly = e.clientY; inp.moved = 0;
+  inp.drag = e.button === 0 ? 'orbit' : 'pan'; inp.touch = e.pointerType === 'touch';
+  if (e.button === 1) e.preventDefault();
 });
 canvas.addEventListener('pointermove', e => {
   inp.mx = e.offsetX; inp.my = e.offsetY;
-  const dx = e.clientX - (inp.lx ?? e.clientX), dy = e.clientY - (inp.ly ?? e.clientY); inp.lx = e.clientX; inp.ly = e.clientY;
-  if (inp.drag === 'orbit' || inp.drag === 'touch') { cam.yaw -= dx * 0.006; cam.pitch += dy * 0.005; cam.auto = false; inp.moved = (inp.moved || 0) + Math.abs(dx) + Math.abs(dy); }
-  else if (inp.drag === 'pan') {
+  if (!inp.drag) return;
+  const dx = e.clientX - inp.lx, dy = e.clientY - inp.ly; inp.lx = e.clientX; inp.ly = e.clientY;
+  inp.moved += Math.abs(dx) + Math.abs(dy);
+  if (inp.moved < 4) return;
+  if (inp.drag === 'orbit') { cam.yaw -= dx * 0.006; cam.pitch += dy * 0.005; cam.auto = false; canvas.style.cursor = 'grabbing'; }
+  else {
     const s = cam.dist * 0.0016; const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
-    cam.target[0] -= (dx * cy - dy * sy) * s; cam.target[2] -= (-dx * sy - dy * cy) * s;
-    cam.target[0] = clamp(cam.target[0], 0, W); cam.target[2] = clamp(cam.target[2], 0, D); UI.follow = false;
+    cam.target[0] = clamp(cam.target[0] - (dx * cy - dy * sy) * s, 0, W); cam.target[2] = clamp(cam.target[2] - (-dx * sy - dy * cy) * s, 0, D); UI.follow = false;
   }
 });
-canvas.addEventListener('pointerup', e => {
-  if (inp.drag === 'touch' && (inp.moved || 0) < 8) { inp.down = true; useTool(true); }
-  inp.drag = null; inp.down = false;
+canvas.addEventListener('pointerup', () => {
+  if (inp.drag === 'orbit' && inp.moved < 5) { if (inp.touch && UI.tool !== 'inspect') useTool(true); else selectAt(); }
+  inp.drag = null; canvas.style.cursor = '';
 });
+canvas.addEventListener('pointerleave', () => { if (!inp.drag) inp.mx = -1; });
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
   if (e.ctrlKey) { UI.setBrush(UI.brush + (e.deltaY < 0 ? 1 : -1)); return; }
   cam.dist *= Math.exp(e.deltaY * 0.0012);
 }, { passive: false });
+addEventListener('keyup', e => { if (e.key.toLowerCase() === 'e') inp.eHeld = false; });
+addEventListener('blur', () => { inp.eHeld = false; });
 addEventListener('keydown', e => {
-  if (!started) return;
+  if (!started || e.target.tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
-  if (e.code.startsWith('Digit')) { const n = +e.code.slice(5); const i = (n === 0 ? 9 : n - 1) + (e.shiftKey ? 10 : 0); const id = UI.tools[i]; if (id) { const b = document.querySelector(`.tool[data-tool="${id}"]`); b && b.click(); } return; }
+  if (e.code.startsWith('Digit')) { const n = +e.code.slice(5); const id = UI.catItems()[n - 1]; if (id) { const b = document.querySelector(`.slot[data-tool="${id}"]`); b && b.click(); } return; }
+  if (k === 'tab') { e.preventDefault(); const i = CATS.findIndex(c => c.id === UI.cat); UI.cat = CATS[(i + (e.shiftKey ? CATS.length - 1 : 1)) % CATS.length].id; UI.buildToolbar(); return; }
+  if (k === 'e') { if (!e.repeat) { inp.eHeld = true; inp.paintT = 0; useTool(true); } return; }
   if (k === ' ') { e.preventDefault(); UI.togglePause(); }
   else if (k === 't') UI.cycleSpeed();
+  else if (k === 'x') UI.setTool('demolish');
   else if (k === 'r') { cam.yaw = -0.72; cam.pitch = 0.52; cam.dist = 92; cam.target = [W / 2, 11, D / 2]; UI.follow = false; }
   else if (k === 'c') cam.auto = !cam.auto;
   else if (k === 'm') UI.toggleMute();
@@ -302,9 +432,8 @@ addEventListener('keydown', e => {
   else if (k === 'f' && UI.sel && UI.sel.v) UI.follow = !UI.follow;
   else if (k === '[') UI.setBrush(UI.brush - 1);
   else if (k === ']') UI.setBrush(UI.brush + 1);
-  else if (k === 'escape') { UI.setTool('inspect'); UI.sel = null; $('help').classList.remove('open'); }
-  else if (k === 'n') { if (!G.over) for (let i = 0; i < 120; i++) simStep(0.05); }
-  else if (k === '?') $('help').classList.toggle('open');
+  else if (k === 'escape') { UI.setTool('inspect'); UI.sel = null; $('help').classList.remove('on'); }
+  else if (k === '?' || k === '/') $('help').classList.toggle('on');
 });
 
 // ===================== environment & dynamic render =====================
@@ -460,15 +589,27 @@ function collectLights(env) {
   return L;
 }
 
+function updHint() {
+  const el = $('hint'), t = UI.tool, h = UI.hover;
+  if (t === 'inspect' || inp.drag || inp.mx < 0 || !h || !h.hit || G.over) { el.classList.remove('on'); return; }
+  let txt = '', bad = '';
+  if (BDEF[t]) { const def = BDEF[t]; const [x0, z0] = ghostOrigin(t, h.hit); const info = footprintInfo(t, x0, z0);
+    bad = info.bad || (!canAfford(def.cost) ? 'Not enough ' + Object.keys(def.cost).filter(k => G.res[k] < def.cost[k]).join(' or ') : ''); txt = `Build ${def.name}`; }
+  else if (t === 'demolish') { const b = buildingAt(h.hit.x, h.hit.z); txt = b && b.type !== 'campfire' ? (UI.demoPending === b ? `Confirm demolishing the ${BDEF[b.type].name}` : `Demolish ${BDEF[b.type].name}`) : 'Point at a building'; if (!b) bad = txt; }
+  else if (POWERS[t]) { txt = t === 'raise' ? 'Hold to raise land' : t === 'lower' ? 'Hold to lower land' : POWERS[t].name; if (G.res.favor < POWERS[t].favor) bad = 'Not enough Favor'; }
+  const html = `<kbd>E</kbd>${bad || txt}`; if (el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
+  el.classList.add('on'); el.classList.toggle('bad', !!bad);
+  el.style.left = Math.min(inp.mx + 18, innerWidth - el.offsetWidth - 8) + 'px'; el.style.top = (inp.my + 20) + 'px';
+}
 // ===================== main loop =====================
 let started = false, last = performance.now(), uiT = 0;
 function startGame(seed) {
   newGame(seed);
   R.remeshAll();
-  UI.sel = null; UI.setTool('inspect'); UI.buildToolbar(); UI.logDirty = true; rainDrops.length = 0;
+  UI.sel = null; UI.cat = 'homes'; UI.setTool('inspect'); UI.logDirty = true; rainDrops.length = 0;
   G.season = seasonOf();
   cam.yaw = -0.72; cam.pitch = 0.52; cam.dist = 92; cam.target = [W / 2, 11, D / 2];
-  $('btn-pause').textContent = 'Pause'; $('btn-pause').classList.remove('active'); $('btn-speed').textContent = 'Time ×1';
+  UI.syncCtl();
 }
 function frame(now) {
   const rdt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -477,9 +618,10 @@ function frame(now) {
       let gdt = rdt * G.speed / HOUR_SEC;
       while (gdt > 0) { const s = Math.min(gdt, 0.04); simStep(s); gdt -= s; if (G.over) break; }
     }
-    if (G && started && inp.down && (UI.tool === 'raise' || UI.tool === 'lower')) { inp.paintT += rdt; if (inp.paintT > 0.14) { inp.paintT = 0; useTool(false); } }
+    if (G && started && inp.eHeld && (UI.tool === 'raise' || UI.tool === 'lower')) { inp.paintT += rdt; if (inp.paintT > 0.14) { inp.paintT = 0; useTool(false); } }
     if (G) {
-      if (started) { const p = pickAt(inp.mx, inp.my); UI.hover = p; canvas.style.cursor = p.v && UI.tool === 'inspect' ? 'pointer' : 'crosshair'; }
+      if (started) updHint();
+      if (started) { const p = pickAt(inp.mx, inp.my); UI.hover = p; if (!inp.drag) canvas.style.cursor = p.v || (p.hit && buildingAt(p.hit.x, p.hit.z)) ? 'pointer' : 'grab'; }
       R.flushDirty(world.burning.size ? 9 : 4);
       if (cam.auto || !started) cam.yaw += rdt * 0.05;
       if (UI.follow && UI.sel && UI.sel.v && G.vill.includes(UI.sel.v)) { const v = UI.sel.v; cam.target[0] = lerp(cam.target[0], v.x, rdt * 4); cam.target[1] = lerp(cam.target[1], v.y, rdt * 4); cam.target[2] = lerp(cam.target[2], v.z, rdt * 4); }
@@ -489,7 +631,9 @@ function frame(now) {
       R.draw(cam, env, collectLights(env), dyn, dynT);
       if (started) {
         uiT += rdt; if (uiT > 0.2) { uiT = 0; UI.update(); }
-        SND.updAmb(G.rain ? (G.rain.heavy ? 1 : 0.6) : G.clouds.length ? 0.3 : 0, Math.min(1, world.burning.size / 60), G.frozen ? 1 : G.storm ? 0.7 : 0.25);
+        const nt = env.night, quiet = G.rain || G.storm ? 0.3 : 1;
+        SND.updAmb({ rain: G.rain ? (G.rain.heavy ? 1 : 0.65) : G.clouds.length ? 0.35 : 0, fire: Math.min(1, world.burning.size / 50), wind: G.frozen ? 1 : G.storm ? 0.7 : 0.2,
+          birds: G.frozen ? 0 : (1 - nt) * quiet, crickets: G.frozen ? 0 : nt * quiet, musicDay: G.over ? 0 : 1 - nt, musicNight: G.over ? 0 : nt });
       }
     }
   } catch (e) { showError(e); return; }
@@ -503,8 +647,8 @@ try {
   requestAnimationFrame(frame);
 } catch (e) { showError(e); }
 $('start').querySelector('button').onclick = async () => {
-  $('start').classList.add('gone'); started = true; SND.init();
+  $('start').classList.add('gone'); document.body.classList.remove('pre'); started = true; SND.init();
   startGame((Math.random() * 1e6) | 0);
-  UI.banner('The Camp Era', 'Build shelter, gather food, and grow your tribe. Survive the winter.');
+  UI.banner('The Camp era', 'Build shelter, find food, and get through your first winter.');
 };
 window.__T = { get G() { return G; }, comp, get mainComp() { return mainComp; }, astar, walkOK, walkH, updateWalk, simStep, world, placeBuilding, advanceEra, cam, usePower, strike, BDEF, footprintInfo, assignJobs };
