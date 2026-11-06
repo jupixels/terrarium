@@ -12,7 +12,7 @@ A small civilization-building game set in a voxel diorama inside a glass tank. L
 - **Lose:** everyone dies, or the average mood stays below 22% for a full day.
 - **Win:** finish the Great Tower.
 
-Controls: drag with the left mouse button to orbit, right-drag to pan, scroll to zoom. Pick something from the build tray, point at the ground and press **E** to build or use it (hold E to paint land). Left-click villagers or buildings to inspect them. `Tab` switches tray tabs, `Space` pauses, `T` changes speed, `?` opens help.
+Controls: drag with the left mouse button to orbit, right-drag to pan, scroll to zoom. Pick something from the build tray, point at the ground and press **E** to build or use it (hold E to paint land). Left-click villagers or buildings to inspect them. `R` (or the crosshair button) recenters the view, `Tab` switches tray tabs, `Space` pauses, `T` changes speed, `?` opens help. Each season lasts 3 days, so a year is 12 days.
 
 ## Development
 `index.html` is the built game (WebGL2, no dependencies) and loads its sounds and music from `audio/`. Because it fetches audio, run it from a web server (for example `python3 -m http.server`) rather than opening the file directly. The source lives in `src/`:

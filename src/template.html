@@ -60,7 +60,7 @@
   #weather.bad { color: var(--ember); }
 
   /* ---------- resources ---------- */
-  #hud-res { top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; padding: 6px; gap: 2px; border-radius: 16px; }
+  #hud-res { top: 16px; left: 50%; display: flex; align-items: stretch; padding: 6px; gap: 2px; border-radius: 16px; }
   .chip { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 12px 8px 8px; border-radius: 10px; min-width: 84px; transition: background .2s; }
   .chip img, .chip svg.ic { width: 26px; height: 26px; flex: none; image-rendering: auto; }
   .chip .v { font: 600 17px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
@@ -86,8 +86,14 @@
   #volume { width: 76px; accent-color: var(--brass); margin: 0 6px; }
 
   /* ---------- goals ---------- */
-  #goals { top: 112px; left: 16px; width: 252px; padding: 16px 16px 14px; }
-  #goals h2 { font: 18px/1.2 var(--serif); margin: 0 0 2px; }
+  #goals { top: 112px; left: 16px; width: 252px; padding: 14px 16px; overflow-y: auto; scrollbar-width: thin; }
+  #goals .gh { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+  #goals h2 { font: 18px/1.2 var(--serif); margin: 0; flex: 1; }
+  #goals .sum { font-size: 12px; color: var(--bone-3); font-variant-numeric: tabular-nums; }
+  #goals .chev { width: 16px; height: 16px; color: var(--bone-3); transition: transform .2s; }
+  #goals.closed .chev { transform: rotate(-90deg); }
+  #goals.closed .gbody { display: none; }
+  #goals .gbody { margin-top: 2px; }
   #goals .sub { color: var(--bone-3); font-size: 12px; margin-bottom: 12px; }
   .req { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 2px 8px; margin: 7px 0; color: var(--bone-2); }
   .req .tick { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--bone-3); display: grid; place-items: center; }
@@ -107,7 +113,7 @@
   .bigbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--brass), var(--brass-hi)); transition: width .4s var(--ease); }
 
   /* ---------- chronicle ---------- */
-  #log { position: fixed; left: 16px; bottom: 160px; width: 320px; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
+  #log { position: fixed; left: 16px; bottom: 160px; width: 320px; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; overflow: hidden; }
   #log .e { display: grid; grid-template-columns: 8px 1fr; gap: 9px; align-items: baseline; padding: 6px 11px 7px; border-radius: 10px;
     background: rgba(12, 16, 13, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 12.5px; line-height: 1.35; width: fit-content; max-width: 100%; }
   #log .e::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--bone-3); transform: translateY(-1px); }
@@ -117,7 +123,7 @@
   @keyframes logIn { from { opacity: 0; transform: translateY(6px); } }
 
   /* ---------- inspector ---------- */
-  #insp { top: 92px; right: 16px; width: 270px; padding: 16px; display: none; }
+  #insp { top: 92px; right: 16px; width: 270px; padding: 16px; display: none; overflow-y: auto; scrollbar-width: thin; }
   #insp.on { display: block; animation: pop .25s var(--ease); }
   @keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
   .ih { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
@@ -186,13 +192,14 @@
   #tip .tags span { padding: 2px 7px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); font-size: 11.5px; color: var(--bone-2); }
   #tip .tags span.no { background: rgba(242, 107, 76, 0.18); color: #ffc1b2; }
 
-  #toast { top: 96px; left: 50%; transform: translate(-50%, -6px); padding: 9px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s var(--ease); color: #ffe2b8; z-index: 6; }
+  #toast { top: 96px; left: 50%; max-width: calc(100vw - 24px); text-align: center; transform: translate(-50%, -6px); padding: 9px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s var(--ease); color: #ffe2b8; z-index: 6; }
   #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #toast { transform: translate(-50%, 6px); }
 
-  #banner { position: fixed; top: 21%; left: 50%; transform: translate(-50%, 8px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s, transform .8s var(--ease); z-index: 4; }
+  #banner { position: fixed; top: 21%; left: 50%; width: min(720px, calc(100vw - 32px)); transform: translate(-50%, 8px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s, transform .8s var(--ease); z-index: 4; }
   #banner.on { opacity: 1; transform: translate(-50%, 0); }
-  #banner h3 { margin: 0; font: clamp(34px, 5vw, 56px)/1.05 var(--serif); text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); display: flex; align-items: center; gap: 18px; justify-content: center; }
-  #banner h3::before, #banner h3::after { content: ""; width: 56px; height: 1.5px; background: var(--brass); }
+  #banner h3 { margin: 0; font: clamp(28px, 4.4vw, 56px)/1.05 var(--serif); text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); white-space: nowrap; display: flex; align-items: center; gap: 18px; justify-content: center; }
+  #banner h3::before, #banner h3::after { content: ""; flex: 0 1 56px; min-width: 16px; height: 1.5px; background: var(--brass); }
   #banner p { margin: 10px 0 0; color: var(--bone); font-size: 15px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7); }
 
   #hint { position: fixed; z-index: 5; pointer-events: none; display: none; align-items: center; gap: 7px; padding: 5px 10px 5px 5px; border-radius: 9px;
@@ -237,9 +244,14 @@
   #error.open { display: block; }
   body.pre .hud { display: none !important; }
   body.hide-ui .hud { display: none !important; }
-  @media (max-width: 1180px) { #goals { top: auto; bottom: 168px; left: auto; right: 16px; width: 230px; } #log { width: 280px; } .chip { min-width: 0; } .chip .n { display: none; } }
-  @media (max-width: 820px) { #slots { min-width: 0; } #hud-dial .txt, #log, #volume, #goals { display: none; } #hud-dial { padding: 8px; border-radius: 48px; }
-    #hud-res { top: 92px; } .chip { padding: 5px 8px 8px 5px; } .chip img { width: 20px; height: 20px; } .chip .v { font-size: 14px; } #tabs .hint { display: none; } .slot { width: 72px; } }
+  #hud-res.compact .chip { min-width: 0; padding: 6px 9px 8px 6px; } #hud-res.compact .chip .n { display: none; } #hud-res.compact .rule { margin: 8px 2px; }
+  #hud-res.tiny { padding: 4px; gap: 0; } #hud-res.tiny .chip { padding: 5px 5px 8px 4px; gap: 4px; } #hud-res.tiny .chip img, #hud-res.tiny .chip svg.ic { width: 17px; height: 17px; } #hud-res.tiny .chip .v { font-size: 13px; } #hud-res.tiny .meter { left: 5px; right: 5px; }
+  body.narrow #hud-dial .txt, body.narrow #volume, body.narrow #tabs .hint { display: none; }
+  body.narrow #hud-dial { padding: 6px; border-radius: 48px; } body.narrow #dial { width: 52px; height: 52px; }
+  body.narrow .ib { width: 34px; height: 34px; } body.narrow .seg button { min-width: 30px; height: 28px; }
+  body.narrow #slots { min-width: 0; } body.narrow .slot { width: 70px; } body.narrow .tool2 { height: 40px; padding: 0 10px 0 8px; } body.narrow .tool2 kbd { display: none; }
+  body.narrow #tray { padding: 0 6px 6px; } body.narrow #tabs { padding: 6px 2px 4px; } body.narrow #tabs button { padding: 6px 8px 8px; font-size: 12.5px; } body.narrow #tabs button.on::after { left: 8px; right: 8px; }
+  body.short #goals .req { margin: 4px 0; } body.short #goals .sub { display: none; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -250,8 +262,8 @@
   <svg id="dial" viewBox="0 0 68 68" aria-hidden="true"></svg>
   <div class="txt">
     <div class="wordmark">Terrarium</div>
-    <div id="date">Year 1, Spring</div>
-    <div id="clock">Day 1 of 3, 06:00</div>
+    <div id="date">Spring, year 1</div>
+    <div id="clock">06:00</div>
     <div id="weather"></div>
   </div>
 </div>
@@ -261,6 +273,7 @@
 <div id="hud-ctl" class="glass hud">
   <button class="ib" id="btn-pause" title="Pause (Space)"></button>
   <div class="seg" id="speed"><button data-s="1" class="on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button></div>
+  <button class="ib" id="btn-center" title="Recenter view (R)"></button>
   <button class="ib" id="btn-music" title="Music"></button>
   <button class="ib" id="btn-sound" title="Mute (M)"></button>
   <input id="volume" type="range" min="0" max="100" value="70" aria-label="Volume">
@@ -290,18 +303,19 @@
 <div id="help" class="glass framed">
   <h2>How to play</h2>
   <div class="keys">
-    <div>Left click</div><div>Use the selected tool. Hold to paint land.</div>
-    <div>Right drag</div><div>Orbit the tank (or Alt + drag)</div>
-    <div>Middle drag, wheel</div><div>Pan and zoom</div>
+    <div>Left drag</div><div>Orbit the tank</div>
+    <div>Right drag, wheel</div><div>Pan and zoom</div>
+    <div>Left click</div><div>Select a villager or building</div>
+    <div><kbd>E</kbd></div><div>Build or use the selected item at the cursor. Hold to paint land.</div>
     <div><kbd>1</kbd>–<kbd>5</kbd></div><div>Pick an item in the open tab</div>
     <div><kbd>Tab</kbd></div><div>Next tab</div>
     <div><kbd>Esc</kbd> <kbd>X</kbd></div><div>Inspect, demolish</div>
     <div><kbd>Space</kbd> <kbd>T</kbd></div><div>Pause, change speed</div>
     <div><kbd>[</kbd> <kbd>]</kbd></div><div>Brush size for land tools</div>
-    <div><kbd>F</kbd> <kbd>R</kbd> <kbd>C</kbd></div><div>Follow villager, reset view, slow orbit</div>
+    <div><kbd>F</kbd> <kbd>R</kbd> <kbd>C</kbd></div><div>Follow villager, recenter view, slow orbit</div>
     <div><kbd>M</kbd> <kbd>H</kbd></div><div>Mute, hide interface</div>
   </div>
-  <p>Villagers choose their own work: put up a workplace and someone will staff it. Everyone eats twice a day, winter freezes the lake and kills crops, and anyone without a home can freeze. If mood stays below 22% for a whole day, your people will leave. Happy villagers earn Favor for god powers.</p>
+  <p>Villagers choose their own work: put up a workplace and someone will staff it. Everyone eats twice a day, winter freezes the lake and kills crops, and anyone without a home can freeze. If mood stays below 22% for a whole day, your people will leave. Each season lasts 3 days, so a year is 12 days. Happy villagers earn Favor for god powers.</p>
 </div>
 
 <div id="start">

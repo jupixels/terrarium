@@ -60,7 +60,7 @@
   #weather.bad { color: var(--ember); }
 
   /* ---------- resources ---------- */
-  #hud-res { top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; padding: 6px; gap: 2px; border-radius: 16px; }
+  #hud-res { top: 16px; left: 50%; display: flex; align-items: stretch; padding: 6px; gap: 2px; border-radius: 16px; }
   .chip { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 12px 8px 8px; border-radius: 10px; min-width: 84px; transition: background .2s; }
   .chip img, .chip svg.ic { width: 26px; height: 26px; flex: none; image-rendering: auto; }
   .chip .v { font: 600 17px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
@@ -86,8 +86,14 @@
   #volume { width: 76px; accent-color: var(--brass); margin: 0 6px; }
 
   /* ---------- goals ---------- */
-  #goals { top: 112px; left: 16px; width: 252px; padding: 16px 16px 14px; }
-  #goals h2 { font: 18px/1.2 var(--serif); margin: 0 0 2px; }
+  #goals { top: 112px; left: 16px; width: 252px; padding: 14px 16px; overflow-y: auto; scrollbar-width: thin; }
+  #goals .gh { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+  #goals h2 { font: 18px/1.2 var(--serif); margin: 0; flex: 1; }
+  #goals .sum { font-size: 12px; color: var(--bone-3); font-variant-numeric: tabular-nums; }
+  #goals .chev { width: 16px; height: 16px; color: var(--bone-3); transition: transform .2s; }
+  #goals.closed .chev { transform: rotate(-90deg); }
+  #goals.closed .gbody { display: none; }
+  #goals .gbody { margin-top: 2px; }
   #goals .sub { color: var(--bone-3); font-size: 12px; margin-bottom: 12px; }
   .req { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 2px 8px; margin: 7px 0; color: var(--bone-2); }
   .req .tick { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--bone-3); display: grid; place-items: center; }
@@ -107,7 +113,7 @@
   .bigbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--brass), var(--brass-hi)); transition: width .4s var(--ease); }
 
   /* ---------- chronicle ---------- */
-  #log { position: fixed; left: 16px; bottom: 160px; width: 320px; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
+  #log { position: fixed; left: 16px; bottom: 160px; width: 320px; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; overflow: hidden; }
   #log .e { display: grid; grid-template-columns: 8px 1fr; gap: 9px; align-items: baseline; padding: 6px 11px 7px; border-radius: 10px;
     background: rgba(12, 16, 13, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 12.5px; line-height: 1.35; width: fit-content; max-width: 100%; }
   #log .e::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--bone-3); transform: translateY(-1px); }
@@ -117,7 +123,7 @@
   @keyframes logIn { from { opacity: 0; transform: translateY(6px); } }
 
   /* ---------- inspector ---------- */
-  #insp { top: 92px; right: 16px; width: 270px; padding: 16px; display: none; }
+  #insp { top: 92px; right: 16px; width: 270px; padding: 16px; display: none; overflow-y: auto; scrollbar-width: thin; }
   #insp.on { display: block; animation: pop .25s var(--ease); }
   @keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
   .ih { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
@@ -186,13 +192,14 @@
   #tip .tags span { padding: 2px 7px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); font-size: 11.5px; color: var(--bone-2); }
   #tip .tags span.no { background: rgba(242, 107, 76, 0.18); color: #ffc1b2; }
 
-  #toast { top: 96px; left: 50%; transform: translate(-50%, -6px); padding: 9px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s var(--ease); color: #ffe2b8; z-index: 6; }
+  #toast { top: 96px; left: 50%; max-width: calc(100vw - 24px); text-align: center; transform: translate(-50%, -6px); padding: 9px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s var(--ease); color: #ffe2b8; z-index: 6; }
   #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #toast { transform: translate(-50%, 6px); }
 
-  #banner { position: fixed; top: 21%; left: 50%; transform: translate(-50%, 8px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s, transform .8s var(--ease); z-index: 4; }
+  #banner { position: fixed; top: 21%; left: 50%; width: min(720px, calc(100vw - 32px)); transform: translate(-50%, 8px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s, transform .8s var(--ease); z-index: 4; }
   #banner.on { opacity: 1; transform: translate(-50%, 0); }
-  #banner h3 { margin: 0; font: clamp(34px, 5vw, 56px)/1.05 var(--serif); text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); display: flex; align-items: center; gap: 18px; justify-content: center; }
-  #banner h3::before, #banner h3::after { content: ""; width: 56px; height: 1.5px; background: var(--brass); }
+  #banner h3 { margin: 0; font: clamp(28px, 4.4vw, 56px)/1.05 var(--serif); text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55); white-space: nowrap; display: flex; align-items: center; gap: 18px; justify-content: center; }
+  #banner h3::before, #banner h3::after { content: ""; flex: 0 1 56px; min-width: 16px; height: 1.5px; background: var(--brass); }
   #banner p { margin: 10px 0 0; color: var(--bone); font-size: 15px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7); }
 
   #hint { position: fixed; z-index: 5; pointer-events: none; display: none; align-items: center; gap: 7px; padding: 5px 10px 5px 5px; border-radius: 9px;
@@ -237,9 +244,14 @@
   #error.open { display: block; }
   body.pre .hud { display: none !important; }
   body.hide-ui .hud { display: none !important; }
-  @media (max-width: 1180px) { #goals { top: auto; bottom: 168px; left: auto; right: 16px; width: 230px; } #log { width: 280px; } .chip { min-width: 0; } .chip .n { display: none; } }
-  @media (max-width: 820px) { #slots { min-width: 0; } #hud-dial .txt, #log, #volume, #goals { display: none; } #hud-dial { padding: 8px; border-radius: 48px; }
-    #hud-res { top: 92px; } .chip { padding: 5px 8px 8px 5px; } .chip img { width: 20px; height: 20px; } .chip .v { font-size: 14px; } #tabs .hint { display: none; } .slot { width: 72px; } }
+  #hud-res.compact .chip { min-width: 0; padding: 6px 9px 8px 6px; } #hud-res.compact .chip .n { display: none; } #hud-res.compact .rule { margin: 8px 2px; }
+  #hud-res.tiny { padding: 4px; gap: 0; } #hud-res.tiny .chip { padding: 5px 5px 8px 4px; gap: 4px; } #hud-res.tiny .chip img, #hud-res.tiny .chip svg.ic { width: 17px; height: 17px; } #hud-res.tiny .chip .v { font-size: 13px; } #hud-res.tiny .meter { left: 5px; right: 5px; }
+  body.narrow #hud-dial .txt, body.narrow #volume, body.narrow #tabs .hint { display: none; }
+  body.narrow #hud-dial { padding: 6px; border-radius: 48px; } body.narrow #dial { width: 52px; height: 52px; }
+  body.narrow .ib { width: 34px; height: 34px; } body.narrow .seg button { min-width: 30px; height: 28px; }
+  body.narrow #slots { min-width: 0; } body.narrow .slot { width: 70px; } body.narrow .tool2 { height: 40px; padding: 0 10px 0 8px; } body.narrow .tool2 kbd { display: none; }
+  body.narrow #tray { padding: 0 6px 6px; } body.narrow #tabs { padding: 6px 2px 4px; } body.narrow #tabs button { padding: 6px 8px 8px; font-size: 12.5px; } body.narrow #tabs button.on::after { left: 8px; right: 8px; }
+  body.short #goals .req { margin: 4px 0; } body.short #goals .sub { display: none; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -250,8 +262,8 @@
   <svg id="dial" viewBox="0 0 68 68" aria-hidden="true"></svg>
   <div class="txt">
     <div class="wordmark">Terrarium</div>
-    <div id="date">Year 1, Spring</div>
-    <div id="clock">Day 1 of 3, 06:00</div>
+    <div id="date">Spring, year 1</div>
+    <div id="clock">06:00</div>
     <div id="weather"></div>
   </div>
 </div>
@@ -261,6 +273,7 @@
 <div id="hud-ctl" class="glass hud">
   <button class="ib" id="btn-pause" title="Pause (Space)"></button>
   <div class="seg" id="speed"><button data-s="1" class="on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button></div>
+  <button class="ib" id="btn-center" title="Recenter view (R)"></button>
   <button class="ib" id="btn-music" title="Music"></button>
   <button class="ib" id="btn-sound" title="Mute (M)"></button>
   <input id="volume" type="range" min="0" max="100" value="70" aria-label="Volume">
@@ -290,18 +303,19 @@
 <div id="help" class="glass framed">
   <h2>How to play</h2>
   <div class="keys">
-    <div>Left click</div><div>Use the selected tool. Hold to paint land.</div>
-    <div>Right drag</div><div>Orbit the tank (or Alt + drag)</div>
-    <div>Middle drag, wheel</div><div>Pan and zoom</div>
+    <div>Left drag</div><div>Orbit the tank</div>
+    <div>Right drag, wheel</div><div>Pan and zoom</div>
+    <div>Left click</div><div>Select a villager or building</div>
+    <div><kbd>E</kbd></div><div>Build or use the selected item at the cursor. Hold to paint land.</div>
     <div><kbd>1</kbd>–<kbd>5</kbd></div><div>Pick an item in the open tab</div>
     <div><kbd>Tab</kbd></div><div>Next tab</div>
     <div><kbd>Esc</kbd> <kbd>X</kbd></div><div>Inspect, demolish</div>
     <div><kbd>Space</kbd> <kbd>T</kbd></div><div>Pause, change speed</div>
     <div><kbd>[</kbd> <kbd>]</kbd></div><div>Brush size for land tools</div>
-    <div><kbd>F</kbd> <kbd>R</kbd> <kbd>C</kbd></div><div>Follow villager, reset view, slow orbit</div>
+    <div><kbd>F</kbd> <kbd>R</kbd> <kbd>C</kbd></div><div>Follow villager, recenter view, slow orbit</div>
     <div><kbd>M</kbd> <kbd>H</kbd></div><div>Mute, hide interface</div>
   </div>
-  <p>Villagers choose their own work: put up a workplace and someone will staff it. Everyone eats twice a day, winter freezes the lake and kills crops, and anyone without a home can freeze. If mood stays below 22% for a whole day, your people will leave. Happy villagers earn Favor for god powers.</p>
+  <p>Villagers choose their own work: put up a workplace and someone will staff it. Everyone eats twice a day, winter freezes the lake and kills crops, and anyone without a home can freeze. If mood stays below 22% for a whole day, your people will leave. Each season lasts 3 days, so a year is 12 days. Happy villagers earn Favor for god powers.</p>
 </div>
 
 <div id="start">
@@ -1056,7 +1070,7 @@ const BDEF = {
   farm: { name: 'Farm', w: 5, d: 5, cost: { wood: 20 }, era: 1, hours: 3, jobs: 2, walk: true, desc: '2 farmers grow crops. Big harvests, but nothing grows in winter and floods ruin fields.',
     tmpl() { const c = []; for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) c.push([x, -1, z, B.SOIL]);
       for (const [x, z] of [[0, 0], [4, 0], [0, 4], [4, 4]]) c.push([x, 0, z, B.LOG]); return c; } },
-  quarry: { name: 'Quarry', w: 3, d: 3, cost: { wood: 25 }, era: 1, hours: 4, jobs: 2, desc: '2 quarrymen dig the land nearby for stone (and ore). They reshape the terrain — watch the lake!',
+  quarry: { name: 'Quarry', w: 3, d: 3, cost: { wood: 25 }, era: 1, hours: 4, jobs: 2, desc: '2 quarrymen dig the land nearby for stone (and ore). They dig the land away, so keep them clear of the lake.',
     tmpl() { return [[0, 0, 0, B.STONE], [1, 0, 0, B.STONE], [0, 1, 0, B.STONE], [0, 0, 1, B.STONE], [2, 0, 2, B.LOG], [2, 1, 2, B.LOG], [2, 2, 2, B.LOG], [1, 2, 2, B.PLANK], [0, 2, 2, B.PLANK]]; } },
   storehouse: { name: 'Storehouse', w: 3, d: 3, cost: { wood: 40 }, era: 1, hours: 6, drop: true, desc: 'Holds +150 of each resource and gives workers a closer drop-off point.',
     tmpl() { const c = []; for (let y = 0; y < 2; y++) for (let x = 0; x < 3; x++) for (let z = 0; z < 3; z++) {
@@ -1235,7 +1249,7 @@ function footprintInfo(type, x0, z0) {
     hs.push(gt); mn = Math.min(mn, gt); mx = Math.max(mx, gt); sum += gt;
   }
   if (bad) return { bad };
-  if (mx - mn > (type === 'tower' ? 1 : 2)) return { bad: 'Ground is too steep — flatten it with Raise/Lower Land' };
+  if (mx - mn > (type === 'tower' ? 1 : 2)) return { bad: 'The ground here is too steep. Flatten it with Raise or Lower Land.' };
   hs.sort((a, b) => a - b);
   const base = hs[hs.length >> 1] + 1;
   if (type === 'dock') {
@@ -1247,7 +1261,7 @@ function footprintInfo(type, x0, z0) {
     if (!(t === B.STONE || t === B.ORE || base >= 19)) return { bad: 'Mines need rocky or high ground (try the mountain)' };
   }
   const top = def.tmpl(base).reduce((m, c) => Math.max(m, c[1]), 0);
-  if (base + top >= H - 1) return { bad: 'Too high — it would hit the lid' };
+  if (base + top >= H - 1) return { bad: 'Too tall to fit under the lid here' };
   if (G && G.blds.length && !def.walk) { // don't let a building cut the village apart
     const saved = []; for (let z = z0; z < z0 + def.d; z++) for (let x = x0; x < x0 + def.w; x++) { saved.push(walkOK[x + z * W]); walkOK[x + z * W] = 0; }
     labelComponents();
@@ -1256,7 +1270,7 @@ function footprintInfo(type, x0, z0) {
     const reach = ringCells(x0, z0, def.w, def.d, 1).some(c => inMain(c[0], c[1]));
     let k = 0; for (let z = z0; z < z0 + def.d; z++) for (let x = x0; x < x0 + def.w; x++) walkOK[x + z * W] = saved[k++];
     labelComponents();
-    if (!ok) return { bad: `That would cut off the ${BDEF[who.type].name} — villagers couldn\u2019t reach it` };
+    if (!ok) return { bad: `That would block the path to the ${BDEF[who.type].name}` };
     if (!reach) return { bad: 'Villagers couldn\u2019t reach this spot' };
   }
   return { base };
@@ -1777,7 +1791,7 @@ function hourly() {
       if (sNow === 0) { G.frozen = false; addLog(`Spring of year ${Math.floor(day / 12) + 1}. The ice melts and snowmelt swells the streams.`, 'good');
         for (let i = 0; i < world.v.length; i++) if (world.v[i] === B.ICE) { world.v[i] = B.WATER; G.waterActive.add(i); world.markDirty(i % W, (i / (W * D)) | 0, ((i / W) | 0) % D); }
         for (let k = 0; k < 70; k++) { const x = 4 + (Math.random() * 14 | 0), z = 4 + (Math.random() * 14 | 0); const y = world.topAny(x, z); if (y < H - 2) world.set(x, y + 1, z, B.WATER); } }
-      if (sNow === 1) addLog('Summer. Dry heat — beware of lightning and wildfires.', 'warn');
+      if (sNow === 1) addLog('Summer is here. Dry heat brings lightning and wildfires.', 'warn');
       if (sNow === 2) addLog('Autumn. Crops grow fast and foraging is plentiful. Stockpile food for winter.');
       assignJobs();
     }
@@ -2072,6 +2086,7 @@ const SVGI = {
   cursor: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3.5l13 7.2-5.6 1.6 3.4 6-2.6 1.4-3.3-6L6 17.6z"/></svg>',
   hammer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4M12.5 7.5l-8 8a1.4 1.4 0 0 0 2 2l8-8"/><path d="M11 4.5c2-1.5 4.5-1.5 6.5.5l2 2-3 3-1.5-1.5"/></svg>',
   note: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6.2a1 1 0 0 1 .78-.98l9-2A1 1 0 0 1 20 4.2v11.3" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="6.5" cy="17.5" rx="3" ry="2.4"/><ellipse cx="17.5" cy="15.5" rx="3" ry="2.4"/></svg>',
+  center: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="7.5"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
   house: '<svg class="ic" viewBox="0 0 26 26"><path d="M4 12.5L13 5l9 7.5" fill="none" stroke="#d6b266" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 11.5V21h13v-9.5" fill="#3a4a35" stroke="#d6b266" stroke-width="1.6"/><rect x="11" y="15" width="4" height="6" fill="#f2bd55"/></svg>',
   rain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 15a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" fill="currentColor" stroke="none" opacity=".85"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></svg>',
@@ -2121,10 +2136,13 @@ const UI = {
     $('btn-music').innerHTML = SVGI.note; $('btn-music').onclick = () => { SND.setMusic(!SND.musicOn); this.syncCtl(); };
     $('volume').oninput = e => SND.setVol(e.target.value / 100);
     $('btn-help').onclick = () => $('help').classList.toggle('on');
+    $('btn-center').innerHTML = SVGI.center; $('btn-center').onclick = () => resetCam();
     $('help').onclick = () => $('help').classList.remove('on');
     $('size-minus').onclick = () => this.setBrush(this.brush - 1);
     $('size-plus').onclick = () => this.setBrush(this.brush + 1);
-    $('goals').addEventListener('click', e => { if (e.target.id === 'btn-era') advanceEra(); });
+    $('goals').addEventListener('click', e => { if (e.target.id === 'btn-era') advanceEra(); else if (e.target.closest('.gh')) { this.goalsOpen = !this.goalsOpen; $('goals').classList.toggle('closed', !this.goalsOpen); this.layout(); } });
+    this.goalsOpen = innerWidth >= 700; $('goals').classList.toggle('closed', !this.goalsOpen);
+    addEventListener('resize', () => this.layout());
     $('insp').addEventListener('click', e => this.inspClick(e));
     const side = document.querySelectorAll('.tool2');
     side[0].innerHTML = `${SVGI.cursor}Select<kbd>Esc</kbd>`; side[1].innerHTML = `${SVGI.hammer}Demolish<kbd>X</kbd>`;
@@ -2182,7 +2200,7 @@ const UI = {
   cycleSpeed() { this.setSpeed(G.speed === 1 ? 2 : G.speed === 2 ? 4 : 1); },
   toggleMute() { SND.setMuted(!SND.muted); this.syncCtl(); },
   toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => t.classList.remove('on'), 2400); },
-  banner(title, sub) { const b = $('banner'); b.innerHTML = `<h3>${title}</h3><p>${sub}</p>`; b.classList.add('on'); clearTimeout(this._bt); this._bt = setTimeout(() => b.classList.remove('on'), 5000); },
+  banner(title, sub) { const b = $('banner'); b.innerHTML = `<h3>${title}</h3><p>${sub}</p>`; b.classList.add('on'); this.layout(); clearTimeout(this._bt); this._bt = setTimeout(() => { b.classList.remove('on'); this.layout(); }, 5000); },
   showEnd() {
     const o = G.over, s = G.stats, day = dayOf();
     const e = $('end'); e.className = 'on ' + (o.win ? 'win' : 'lose');
@@ -2209,8 +2227,10 @@ const UI = {
     s += `<circle cx="${mx}" cy="${my}" r="3.2" fill="#e3e9f6"/><circle cx="${mx + 1.4}" cy="${my - 0.8}" r="2.6" fill="${sky}"/>`;
     s += `<rect x="0" y="${cy}" width="68" height="34" fill="${se === 3 ? '#cfd9e3' : '#26361f'}"/><path d="M12 ${cy} H56" stroke="#d6b266" stroke-width=".8" opacity=".7"/></g>`;
     $('dial').innerHTML = s;
-    $('date').textContent = `Year ${Math.floor(dd / 12) + 1}, ${SEASONS[se]}`;
-    $('clock').textContent = `Day ${dd % 3 + 1} of 3, ${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 6) * 10).padStart(2, '0')}`;
+    $('date').textContent = `${SEASONS[se]}, year ${Math.floor(dd / 12) + 1}`;
+    const left = 2 - dd % 3, nextS = SEASONS[(se + 1) % 4].toLowerCase();
+    $('clock').textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 6) * 10).padStart(2, '0')}, ${left ? `${left + 1} days until ${nextS}` : `${nextS} tomorrow`}`;
+    $('clock').title = 'Each season lasts 3 days. A year is 12 days.';
     const w = $('weather'); let wh = '', bad = false;
     if (G.rain) { wh = SVGI.rain + (G.rain.heavy ? 'Heavy storm' : 'Raining'); bad = G.rain.heavy; }
     else if (G.storm) { wh = SVGI.bolt + 'Thunderstorm'; bad = true; }
@@ -2232,17 +2252,22 @@ const UI = {
     $('rv-mood').textContent = Math.round(avg) + '%'; $('rc-mood').classList.toggle('low', avg < 35);
     this.drawDial(); this.refreshCosts();
     // goals
-    const st = eraStatus(); let gh = '';
+    const st = eraStatus(); let head = '', body = '';
+    const chev = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
     if (st) {
-      gh += `<h2>Toward the ${st.to} era</h2><div class="sub">Meet every goal, then advance</div>`;
-      for (const it of st.items) gh += `<div class="req ${it.ok ? 'ok' : ''}"><span class="tick"></span><span>${it.label}</span><span class="cnt">${Math.min(it.cur, it.need)}/${it.need}</span><span class="bar"><i style="width:${Math.min(100, it.cur / it.need * 100)}%"></i></span></div>`;
-      if (st.ready) gh += `<button id="btn-era">Advance to the ${st.to} era</button>`;
+      const done = st.items.filter(i => i.ok).length;
+      head = `<h2>Next era: ${st.to}</h2><span class="sum">${done}/${st.items.length}</span>`;
+      body += `<div class="sub">Meet every goal, then advance</div>`;
+      for (const it of st.items) body += `<div class="req ${it.ok ? 'ok' : ''}"><span class="tick"></span><span>${it.label}</span><span class="cnt">${Math.min(it.cur, it.need)}/${it.need}</span><span class="bar"><i style="width:${Math.min(100, it.cur / it.need * 100)}%"></i></span></div>`;
     } else {
       const tw = G.blds.find(b => b.type === 'tower'); const p = tw ? Math.min(100, tw.progress / BDEF.tower.hours * 100) : 0;
-      gh += `<h2>Raise the Great Tower</h2><div class="sub">${tw ? (tw.done ? 'Complete' : 'Under construction') : 'Build it from the Wonder tab to win'}</div><div class="bigbar"><i style="width:${p}%"></i></div>`;
-      if (!tw) gh += Object.entries(BDEF.tower.cost).map(([k, v]) => `<div class="req ${G.res[k] >= v ? 'ok' : ''}"><span class="tick"></span><span>${v} ${k}</span><span class="cnt">${Math.min(v, Math.floor(G.res[k]))}/${v}</span></div>`).join('');
-      else gh += `<div class="req"><span></span><span>${Math.floor(p)}% built</span><span class="cnt">${tw.workers.length} builders</span></div>`;
+      head = `<h2>Raise the Great Tower</h2><span class="sum">${Math.floor(p)}%</span>`;
+      body += `<div class="sub">${tw ? (tw.done ? 'Complete' : 'Under construction') : 'Build it from the Wonder tab to win'}</div><div class="bigbar"><i style="width:${p}%"></i></div>`;
+      if (!tw) body += Object.entries(BDEF.tower.cost).map(([k, v]) => `<div class="req ${G.res[k] >= v ? 'ok' : ''}"><span class="tick"></span><span>${v} ${k}</span><span class="cnt">${Math.min(v, Math.floor(G.res[k]))}/${v}</span></div>`).join('');
+      else body += `<div class="req"><span></span><span>${tw.workers.length} builder${tw.workers.length === 1 ? '' : 's'} at work</span><span></span></div>`;
     }
+    let gh = `<button class="gh" aria-expanded="${this.goalsOpen}">${head}${chev}</button><div class="gbody">${body}</div>`;
+    if (st && st.ready) gh += `<button id="btn-era">Advance to the ${st.to} era</button>`;
     if (G.lowMoodH > 0) gh += `<div class="despair"><b>Your people are in despair.</b> They leave in ${24 - G.lowMoodH} hours unless mood rises above 22%.</div>`;
     if ($('goals').dataset.h !== gh) { $('goals').innerHTML = gh; $('goals').dataset.h = gh; }
     // chronicle
@@ -2253,6 +2278,63 @@ const UI = {
       this.lastLogTop = top;
     }
     this.updInsp();
+    this.layout();
+  },
+  layout() {
+    const vw = innerWidth, vh = innerHeight, narrow = vw < 760, M = narrow ? 8 : 16, GAP = narrow ? 8 : 12;
+    document.body.classList.toggle('narrow', narrow); document.body.classList.toggle('short', vh < 760);
+    const R = el => el.getBoundingClientRect();
+    const dial = $('hud-dial'), res = $('hud-res'), ctl = $('hud-ctl'), goals = $('goals'), log = $('log'), insp = $('insp'), tray = $('tray');
+    for (const [el, k, v] of [[dial, 'left', M], [dial, 'top', M], [ctl, 'right', M], [ctl, 'top', M]]) el.style[k] = v + 'px';
+    tray.style.bottom = M + 'px'; tray.style.maxWidth = (vw - 2 * M) + 'px';
+    const d = R(dial), c = R(ctl);
+    res.classList.remove('compact', 'tiny'); let rw = R(res).width;
+    const room = c.left - d.right - 2 * GAP; let wrapped = false;
+    if (rw > room) { res.classList.add('compact'); rw = R(res).width; if (rw > room) wrapped = true; }
+    if (wrapped && rw > vw - 2 * M) { res.classList.add('tiny'); rw = R(res).width; }
+    const rTop = wrapped ? Math.max(d.bottom, c.bottom) + GAP : M;
+    const rLeft = wrapped ? Math.max(M, (vw - rw) / 2) : clamp((vw - rw) / 2, d.right + GAP, c.left - GAP - rw);
+    res.style.left = rLeft + 'px'; res.style.top = rTop + 'px';
+    const rr = { left: rLeft, right: rLeft + rw, bottom: rTop + R(res).height };
+    const topBand = Math.max(d.bottom, c.bottom, rr.bottom);
+    const t = R(tray);
+    const overlapX = (l, r) => t.left < r + GAP && t.right > l - GAP;
+    // left column: goals then log
+    const gw = Math.min(252, vw - 2 * M); goals.style.width = gw + 'px'; goals.style.left = M + 'px';
+    const gTop = (wrapped && rr.left < M + gw + GAP ? rr.bottom : d.bottom) + GAP;
+    goals.style.top = gTop + 'px';
+    const gLimit = (overlapX(M, M + gw) ? t.top : vh - M) - GAP;
+    goals.style.maxHeight = Math.max(60, gLimit - gTop) + 'px';
+    const g = R(goals);
+    const lw = Math.min(320, vw - 2 * M); log.style.width = lw + 'px'; log.style.left = M + 'px';
+    const lBottom = overlapX(M, M + lw) ? vh - t.top + GAP : M;
+    const lTop = g.bottom + GAP, lMax = vh - lBottom - lTop;
+    log.style.bottom = lBottom + 'px'; log.style.maxHeight = Math.max(0, lMax) + 'px'; log.style.display = lMax < 44 ? 'none' : '';
+    { const kids = Array.from(log.children); kids.forEach(k => k.style.display = ''); let used = 0;
+      for (let i = kids.length - 1; i >= 0; i--) { used += kids[i].offsetHeight + (i < kids.length - 1 ? 4 : 0); if (used > lMax) kids[i].style.display = 'none'; } }
+    // inspector on the right
+    const iw = Math.min(270, vw - 2 * M); insp.style.width = iw + 'px'; insp.style.right = M + 'px';
+    let iTop = (wrapped && rr.right > vw - M - iw - GAP ? rr.bottom : c.bottom) + GAP;
+    if (vw < gw + iw + 2 * M + GAP) iTop = Math.max(iTop, g.bottom + GAP);
+    insp.style.top = iTop + 'px';
+    insp.style.maxHeight = Math.max(120, (overlapX(vw - M - iw, vw - M) ? t.top : vh - M) - GAP - iTop) + 'px';
+    // inspector wins over the log on small screens
+    const ib = insp.classList.contains('on') ? R(insp) : null;
+    if (ib && ib.left < M + lw + GAP && log.style.display !== 'none') { const lb = R(log); if (lb.bottom > ib.top && lb.top < ib.bottom) log.style.display = 'none'; }
+    // toast: centred just above the tray (or above the log if the log sits there)
+    const toast = $('toast'); let tb = vh - t.top + GAP;
+    const lb2 = log.style.display === 'none' ? null : R(log);
+    if (lb2 && lb2.height > 4 && (vw - toast.offsetWidth) / 2 < lb2.right + GAP) tb = vh - lb2.top + GAP;
+    toast.style.top = 'auto'; toast.style.bottom = tb + 'px';
+    // banner: in the clear space between the side panels
+    const banner = $('banner');
+    const gl = g.width > 0 ? g.right + GAP : M, gr = ib ? ib.left - GAP : vw - M;
+    let bl = gl, br = gr, bTop = Math.max(vh * 0.2, topBand + 40);
+    const bannerOn = banner.classList.contains('on');
+    insp.style.visibility = narrow && bannerOn ? 'hidden' : '';
+    if (br - bl < 320) { bl = M; br = vw - M; bTop = Math.max(topBand, g.bottom) + GAP; }
+    const bh = banner.querySelector('h3'); if (bh) bh.style.fontSize = clamp((br - bl) / 9.5, 24, 56) + 'px';
+    banner.style.left = ((bl + br) / 2) + 'px'; banner.style.width = Math.min(720, br - bl) + 'px'; banner.style.top = bTop + 'px';
   },
   portrait(v) {
     const sc = JOB_COL[v.slot ? v.slot.kind : 'none'] || JOB_COL.none, sk = [lerp(0.95, 0.55, v.skin), lerp(0.78, 0.4, v.skin), lerp(0.62, 0.28, v.skin)];
@@ -2400,7 +2482,7 @@ addEventListener('keydown', e => {
   if (k === ' ') { e.preventDefault(); UI.togglePause(); }
   else if (k === 't') UI.cycleSpeed();
   else if (k === 'x') UI.setTool('demolish');
-  else if (k === 'r') { cam.yaw = -0.72; cam.pitch = 0.52; cam.dist = 92; cam.target = [W / 2, 11, D / 2]; UI.follow = false; }
+  else if (k === 'r') resetCam();
   else if (k === 'c') cam.auto = !cam.auto;
   else if (k === 'm') UI.toggleMute();
   else if (k === 'h') document.body.classList.toggle('hide-ui');
@@ -2576,6 +2658,9 @@ function updHint() {
   el.classList.add('on'); el.classList.toggle('bad', !!bad);
   el.style.left = Math.min(inp.mx + 18, innerWidth - el.offsetWidth - 8) + 'px'; el.style.top = (inp.my + 20) + 'px';
 }
+function resetCam() { UI.follow = false; cam.auto = false; cam.goTo = { yaw: -0.72, pitch: 0.52, dist: 92, target: [W / 2, 11, D / 2] };
+  // take the short way round
+  const tw = Math.PI * 2; cam.yaw = ((cam.yaw - cam.goTo.yaw + Math.PI) % tw + tw) % tw - Math.PI + cam.goTo.yaw; }
 // ===================== main loop =====================
 let started = false, last = performance.now(), uiT = 0;
 function startGame(seed) {
@@ -2599,6 +2684,8 @@ function frame(now) {
       if (started) { const p = pickAt(inp.mx, inp.my); UI.hover = p; if (!inp.drag) canvas.style.cursor = p.v || (p.hit && buildingAt(p.hit.x, p.hit.z)) ? 'pointer' : 'grab'; }
       R.flushDirty(world.burning.size ? 9 : 4);
       if (cam.auto || !started) cam.yaw += rdt * 0.05;
+      if (cam.goTo) { const k = 1 - Math.exp(-rdt * 6), q = cam.goTo; cam.yaw = lerp(cam.yaw, q.yaw, k); cam.pitch = lerp(cam.pitch, q.pitch, k); cam.dist = lerp(cam.dist, q.dist, k); for (let i = 0; i < 3; i++) cam.target[i] = lerp(cam.target[i], q.target[i], k);
+        if (Math.abs(cam.yaw - q.yaw) + Math.abs(cam.dist - q.dist) / 50 + Math.abs(cam.target[0] - q.target[0]) / 20 + Math.abs(cam.target[2] - q.target[2]) / 20 < 0.002 || inp.drag) cam.goTo = null; }
       if (UI.follow && UI.sel && UI.sel.v && G.vill.includes(UI.sel.v)) { const v = UI.sel.v; cam.target[0] = lerp(cam.target[0], v.x, rdt * 4); cam.target[1] = lerp(cam.target[1], v.y, rdt * 4); cam.target[2] = lerp(cam.target[2], v.z, rdt * 4); }
       cam.update(canvas.clientWidth / Math.max(1, canvas.clientHeight));
       const env = environment(); setBackground(env);

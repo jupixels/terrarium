@@ -97,6 +97,7 @@ const SVGI = {
   cursor: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3.5l13 7.2-5.6 1.6 3.4 6-2.6 1.4-3.3-6L6 17.6z"/></svg>',
   hammer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4M12.5 7.5l-8 8a1.4 1.4 0 0 0 2 2l8-8"/><path d="M11 4.5c2-1.5 4.5-1.5 6.5.5l2 2-3 3-1.5-1.5"/></svg>',
   note: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6.2a1 1 0 0 1 .78-.98l9-2A1 1 0 0 1 20 4.2v11.3" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="6.5" cy="17.5" rx="3" ry="2.4"/><ellipse cx="17.5" cy="15.5" rx="3" ry="2.4"/></svg>',
+  center: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="7.5"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
   house: '<svg class="ic" viewBox="0 0 26 26"><path d="M4 12.5L13 5l9 7.5" fill="none" stroke="#d6b266" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 11.5V21h13v-9.5" fill="#3a4a35" stroke="#d6b266" stroke-width="1.6"/><rect x="11" y="15" width="4" height="6" fill="#f2bd55"/></svg>',
   rain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 15a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" fill="currentColor" stroke="none" opacity=".85"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></svg>',
@@ -146,10 +147,13 @@ const UI = {
     $('btn-music').innerHTML = SVGI.note; $('btn-music').onclick = () => { SND.setMusic(!SND.musicOn); this.syncCtl(); };
     $('volume').oninput = e => SND.setVol(e.target.value / 100);
     $('btn-help').onclick = () => $('help').classList.toggle('on');
+    $('btn-center').innerHTML = SVGI.center; $('btn-center').onclick = () => resetCam();
     $('help').onclick = () => $('help').classList.remove('on');
     $('size-minus').onclick = () => this.setBrush(this.brush - 1);
     $('size-plus').onclick = () => this.setBrush(this.brush + 1);
-    $('goals').addEventListener('click', e => { if (e.target.id === 'btn-era') advanceEra(); });
+    $('goals').addEventListener('click', e => { if (e.target.id === 'btn-era') advanceEra(); else if (e.target.closest('.gh')) { this.goalsOpen = !this.goalsOpen; $('goals').classList.toggle('closed', !this.goalsOpen); this.layout(); } });
+    this.goalsOpen = innerWidth >= 700; $('goals').classList.toggle('closed', !this.goalsOpen);
+    addEventListener('resize', () => this.layout());
     $('insp').addEventListener('click', e => this.inspClick(e));
     const side = document.querySelectorAll('.tool2');
     side[0].innerHTML = `${SVGI.cursor}Select<kbd>Esc</kbd>`; side[1].innerHTML = `${SVGI.hammer}Demolish<kbd>X</kbd>`;
@@ -207,7 +211,7 @@ const UI = {
   cycleSpeed() { this.setSpeed(G.speed === 1 ? 2 : G.speed === 2 ? 4 : 1); },
   toggleMute() { SND.setMuted(!SND.muted); this.syncCtl(); },
   toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(this._tt); this._tt = setTimeout(() => t.classList.remove('on'), 2400); },
-  banner(title, sub) { const b = $('banner'); b.innerHTML = `<h3>${title}</h3><p>${sub}</p>`; b.classList.add('on'); clearTimeout(this._bt); this._bt = setTimeout(() => b.classList.remove('on'), 5000); },
+  banner(title, sub) { const b = $('banner'); b.innerHTML = `<h3>${title}</h3><p>${sub}</p>`; b.classList.add('on'); this.layout(); clearTimeout(this._bt); this._bt = setTimeout(() => { b.classList.remove('on'); this.layout(); }, 5000); },
   showEnd() {
     const o = G.over, s = G.stats, day = dayOf();
     const e = $('end'); e.className = 'on ' + (o.win ? 'win' : 'lose');
@@ -234,8 +238,10 @@ const UI = {
     s += `<circle cx="${mx}" cy="${my}" r="3.2" fill="#e3e9f6"/><circle cx="${mx + 1.4}" cy="${my - 0.8}" r="2.6" fill="${sky}"/>`;
     s += `<rect x="0" y="${cy}" width="68" height="34" fill="${se === 3 ? '#cfd9e3' : '#26361f'}"/><path d="M12 ${cy} H56" stroke="#d6b266" stroke-width=".8" opacity=".7"/></g>`;
     $('dial').innerHTML = s;
-    $('date').textContent = `Year ${Math.floor(dd / 12) + 1}, ${SEASONS[se]}`;
-    $('clock').textContent = `Day ${dd % 3 + 1} of 3, ${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 6) * 10).padStart(2, '0')}`;
+    $('date').textContent = `${SEASONS[se]}, year ${Math.floor(dd / 12) + 1}`;
+    const left = 2 - dd % 3, nextS = SEASONS[(se + 1) % 4].toLowerCase();
+    $('clock').textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 6) * 10).padStart(2, '0')}, ${left ? `${left + 1} days until ${nextS}` : `${nextS} tomorrow`}`;
+    $('clock').title = 'Each season lasts 3 days. A year is 12 days.';
     const w = $('weather'); let wh = '', bad = false;
     if (G.rain) { wh = SVGI.rain + (G.rain.heavy ? 'Heavy storm' : 'Raining'); bad = G.rain.heavy; }
     else if (G.storm) { wh = SVGI.bolt + 'Thunderstorm'; bad = true; }
@@ -257,17 +263,22 @@ const UI = {
     $('rv-mood').textContent = Math.round(avg) + '%'; $('rc-mood').classList.toggle('low', avg < 35);
     this.drawDial(); this.refreshCosts();
     // goals
-    const st = eraStatus(); let gh = '';
+    const st = eraStatus(); let head = '', body = '';
+    const chev = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
     if (st) {
-      gh += `<h2>Toward the ${st.to} era</h2><div class="sub">Meet every goal, then advance</div>`;
-      for (const it of st.items) gh += `<div class="req ${it.ok ? 'ok' : ''}"><span class="tick"></span><span>${it.label}</span><span class="cnt">${Math.min(it.cur, it.need)}/${it.need}</span><span class="bar"><i style="width:${Math.min(100, it.cur / it.need * 100)}%"></i></span></div>`;
-      if (st.ready) gh += `<button id="btn-era">Advance to the ${st.to} era</button>`;
+      const done = st.items.filter(i => i.ok).length;
+      head = `<h2>Next era: ${st.to}</h2><span class="sum">${done}/${st.items.length}</span>`;
+      body += `<div class="sub">Meet every goal, then advance</div>`;
+      for (const it of st.items) body += `<div class="req ${it.ok ? 'ok' : ''}"><span class="tick"></span><span>${it.label}</span><span class="cnt">${Math.min(it.cur, it.need)}/${it.need}</span><span class="bar"><i style="width:${Math.min(100, it.cur / it.need * 100)}%"></i></span></div>`;
     } else {
       const tw = G.blds.find(b => b.type === 'tower'); const p = tw ? Math.min(100, tw.progress / BDEF.tower.hours * 100) : 0;
-      gh += `<h2>Raise the Great Tower</h2><div class="sub">${tw ? (tw.done ? 'Complete' : 'Under construction') : 'Build it from the Wonder tab to win'}</div><div class="bigbar"><i style="width:${p}%"></i></div>`;
-      if (!tw) gh += Object.entries(BDEF.tower.cost).map(([k, v]) => `<div class="req ${G.res[k] >= v ? 'ok' : ''}"><span class="tick"></span><span>${v} ${k}</span><span class="cnt">${Math.min(v, Math.floor(G.res[k]))}/${v}</span></div>`).join('');
-      else gh += `<div class="req"><span></span><span>${Math.floor(p)}% built</span><span class="cnt">${tw.workers.length} builders</span></div>`;
+      head = `<h2>Raise the Great Tower</h2><span class="sum">${Math.floor(p)}%</span>`;
+      body += `<div class="sub">${tw ? (tw.done ? 'Complete' : 'Under construction') : 'Build it from the Wonder tab to win'}</div><div class="bigbar"><i style="width:${p}%"></i></div>`;
+      if (!tw) body += Object.entries(BDEF.tower.cost).map(([k, v]) => `<div class="req ${G.res[k] >= v ? 'ok' : ''}"><span class="tick"></span><span>${v} ${k}</span><span class="cnt">${Math.min(v, Math.floor(G.res[k]))}/${v}</span></div>`).join('');
+      else body += `<div class="req"><span></span><span>${tw.workers.length} builder${tw.workers.length === 1 ? '' : 's'} at work</span><span></span></div>`;
     }
+    let gh = `<button class="gh" aria-expanded="${this.goalsOpen}">${head}${chev}</button><div class="gbody">${body}</div>`;
+    if (st && st.ready) gh += `<button id="btn-era">Advance to the ${st.to} era</button>`;
     if (G.lowMoodH > 0) gh += `<div class="despair"><b>Your people are in despair.</b> They leave in ${24 - G.lowMoodH} hours unless mood rises above 22%.</div>`;
     if ($('goals').dataset.h !== gh) { $('goals').innerHTML = gh; $('goals').dataset.h = gh; }
     // chronicle
@@ -278,6 +289,63 @@ const UI = {
       this.lastLogTop = top;
     }
     this.updInsp();
+    this.layout();
+  },
+  layout() {
+    const vw = innerWidth, vh = innerHeight, narrow = vw < 760, M = narrow ? 8 : 16, GAP = narrow ? 8 : 12;
+    document.body.classList.toggle('narrow', narrow); document.body.classList.toggle('short', vh < 760);
+    const R = el => el.getBoundingClientRect();
+    const dial = $('hud-dial'), res = $('hud-res'), ctl = $('hud-ctl'), goals = $('goals'), log = $('log'), insp = $('insp'), tray = $('tray');
+    for (const [el, k, v] of [[dial, 'left', M], [dial, 'top', M], [ctl, 'right', M], [ctl, 'top', M]]) el.style[k] = v + 'px';
+    tray.style.bottom = M + 'px'; tray.style.maxWidth = (vw - 2 * M) + 'px';
+    const d = R(dial), c = R(ctl);
+    res.classList.remove('compact', 'tiny'); let rw = R(res).width;
+    const room = c.left - d.right - 2 * GAP; let wrapped = false;
+    if (rw > room) { res.classList.add('compact'); rw = R(res).width; if (rw > room) wrapped = true; }
+    if (wrapped && rw > vw - 2 * M) { res.classList.add('tiny'); rw = R(res).width; }
+    const rTop = wrapped ? Math.max(d.bottom, c.bottom) + GAP : M;
+    const rLeft = wrapped ? Math.max(M, (vw - rw) / 2) : clamp((vw - rw) / 2, d.right + GAP, c.left - GAP - rw);
+    res.style.left = rLeft + 'px'; res.style.top = rTop + 'px';
+    const rr = { left: rLeft, right: rLeft + rw, bottom: rTop + R(res).height };
+    const topBand = Math.max(d.bottom, c.bottom, rr.bottom);
+    const t = R(tray);
+    const overlapX = (l, r) => t.left < r + GAP && t.right > l - GAP;
+    // left column: goals then log
+    const gw = Math.min(252, vw - 2 * M); goals.style.width = gw + 'px'; goals.style.left = M + 'px';
+    const gTop = (wrapped && rr.left < M + gw + GAP ? rr.bottom : d.bottom) + GAP;
+    goals.style.top = gTop + 'px';
+    const gLimit = (overlapX(M, M + gw) ? t.top : vh - M) - GAP;
+    goals.style.maxHeight = Math.max(60, gLimit - gTop) + 'px';
+    const g = R(goals);
+    const lw = Math.min(320, vw - 2 * M); log.style.width = lw + 'px'; log.style.left = M + 'px';
+    const lBottom = overlapX(M, M + lw) ? vh - t.top + GAP : M;
+    const lTop = g.bottom + GAP, lMax = vh - lBottom - lTop;
+    log.style.bottom = lBottom + 'px'; log.style.maxHeight = Math.max(0, lMax) + 'px'; log.style.display = lMax < 44 ? 'none' : '';
+    { const kids = Array.from(log.children); kids.forEach(k => k.style.display = ''); let used = 0;
+      for (let i = kids.length - 1; i >= 0; i--) { used += kids[i].offsetHeight + (i < kids.length - 1 ? 4 : 0); if (used > lMax) kids[i].style.display = 'none'; } }
+    // inspector on the right
+    const iw = Math.min(270, vw - 2 * M); insp.style.width = iw + 'px'; insp.style.right = M + 'px';
+    let iTop = (wrapped && rr.right > vw - M - iw - GAP ? rr.bottom : c.bottom) + GAP;
+    if (vw < gw + iw + 2 * M + GAP) iTop = Math.max(iTop, g.bottom + GAP);
+    insp.style.top = iTop + 'px';
+    insp.style.maxHeight = Math.max(120, (overlapX(vw - M - iw, vw - M) ? t.top : vh - M) - GAP - iTop) + 'px';
+    // inspector wins over the log on small screens
+    const ib = insp.classList.contains('on') ? R(insp) : null;
+    if (ib && ib.left < M + lw + GAP && log.style.display !== 'none') { const lb = R(log); if (lb.bottom > ib.top && lb.top < ib.bottom) log.style.display = 'none'; }
+    // toast: centred just above the tray (or above the log if the log sits there)
+    const toast = $('toast'); let tb = vh - t.top + GAP;
+    const lb2 = log.style.display === 'none' ? null : R(log);
+    if (lb2 && lb2.height > 4 && (vw - toast.offsetWidth) / 2 < lb2.right + GAP) tb = vh - lb2.top + GAP;
+    toast.style.top = 'auto'; toast.style.bottom = tb + 'px';
+    // banner: in the clear space between the side panels
+    const banner = $('banner');
+    const gl = g.width > 0 ? g.right + GAP : M, gr = ib ? ib.left - GAP : vw - M;
+    let bl = gl, br = gr, bTop = Math.max(vh * 0.2, topBand + 40);
+    const bannerOn = banner.classList.contains('on');
+    insp.style.visibility = narrow && bannerOn ? 'hidden' : '';
+    if (br - bl < 320) { bl = M; br = vw - M; bTop = Math.max(topBand, g.bottom) + GAP; }
+    const bh = banner.querySelector('h3'); if (bh) bh.style.fontSize = clamp((br - bl) / 9.5, 24, 56) + 'px';
+    banner.style.left = ((bl + br) / 2) + 'px'; banner.style.width = Math.min(720, br - bl) + 'px'; banner.style.top = bTop + 'px';
   },
   portrait(v) {
     const sc = JOB_COL[v.slot ? v.slot.kind : 'none'] || JOB_COL.none, sk = [lerp(0.95, 0.55, v.skin), lerp(0.78, 0.4, v.skin), lerp(0.62, 0.28, v.skin)];
@@ -425,7 +493,7 @@ addEventListener('keydown', e => {
   if (k === ' ') { e.preventDefault(); UI.togglePause(); }
   else if (k === 't') UI.cycleSpeed();
   else if (k === 'x') UI.setTool('demolish');
-  else if (k === 'r') { cam.yaw = -0.72; cam.pitch = 0.52; cam.dist = 92; cam.target = [W / 2, 11, D / 2]; UI.follow = false; }
+  else if (k === 'r') resetCam();
   else if (k === 'c') cam.auto = !cam.auto;
   else if (k === 'm') UI.toggleMute();
   else if (k === 'h') document.body.classList.toggle('hide-ui');
@@ -601,6 +669,9 @@ function updHint() {
   el.classList.add('on'); el.classList.toggle('bad', !!bad);
   el.style.left = Math.min(inp.mx + 18, innerWidth - el.offsetWidth - 8) + 'px'; el.style.top = (inp.my + 20) + 'px';
 }
+function resetCam() { UI.follow = false; cam.auto = false; cam.goTo = { yaw: -0.72, pitch: 0.52, dist: 92, target: [W / 2, 11, D / 2] };
+  // take the short way round
+  const tw = Math.PI * 2; cam.yaw = ((cam.yaw - cam.goTo.yaw + Math.PI) % tw + tw) % tw - Math.PI + cam.goTo.yaw; }
 // ===================== main loop =====================
 let started = false, last = performance.now(), uiT = 0;
 function startGame(seed) {
@@ -624,6 +695,8 @@ function frame(now) {
       if (started) { const p = pickAt(inp.mx, inp.my); UI.hover = p; if (!inp.drag) canvas.style.cursor = p.v || (p.hit && buildingAt(p.hit.x, p.hit.z)) ? 'pointer' : 'grab'; }
       R.flushDirty(world.burning.size ? 9 : 4);
       if (cam.auto || !started) cam.yaw += rdt * 0.05;
+      if (cam.goTo) { const k = 1 - Math.exp(-rdt * 6), q = cam.goTo; cam.yaw = lerp(cam.yaw, q.yaw, k); cam.pitch = lerp(cam.pitch, q.pitch, k); cam.dist = lerp(cam.dist, q.dist, k); for (let i = 0; i < 3; i++) cam.target[i] = lerp(cam.target[i], q.target[i], k);
+        if (Math.abs(cam.yaw - q.yaw) + Math.abs(cam.dist - q.dist) / 50 + Math.abs(cam.target[0] - q.target[0]) / 20 + Math.abs(cam.target[2] - q.target[2]) / 20 < 0.002 || inp.drag) cam.goTo = null; }
       if (UI.follow && UI.sel && UI.sel.v && G.vill.includes(UI.sel.v)) { const v = UI.sel.v; cam.target[0] = lerp(cam.target[0], v.x, rdt * 4); cam.target[1] = lerp(cam.target[1], v.y, rdt * 4); cam.target[2] = lerp(cam.target[2], v.z, rdt * 4); }
       cam.update(canvas.clientWidth / Math.max(1, canvas.clientHeight));
       const env = environment(); setBackground(env);

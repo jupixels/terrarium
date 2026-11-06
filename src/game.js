@@ -33,7 +33,7 @@ const BDEF = {
   farm: { name: 'Farm', w: 5, d: 5, cost: { wood: 20 }, era: 1, hours: 3, jobs: 2, walk: true, desc: '2 farmers grow crops. Big harvests, but nothing grows in winter and floods ruin fields.',
     tmpl() { const c = []; for (let x = 0; x < 5; x++) for (let z = 0; z < 5; z++) c.push([x, -1, z, B.SOIL]);
       for (const [x, z] of [[0, 0], [4, 0], [0, 4], [4, 4]]) c.push([x, 0, z, B.LOG]); return c; } },
-  quarry: { name: 'Quarry', w: 3, d: 3, cost: { wood: 25 }, era: 1, hours: 4, jobs: 2, desc: '2 quarrymen dig the land nearby for stone (and ore). They reshape the terrain — watch the lake!',
+  quarry: { name: 'Quarry', w: 3, d: 3, cost: { wood: 25 }, era: 1, hours: 4, jobs: 2, desc: '2 quarrymen dig the land nearby for stone (and ore). They dig the land away, so keep them clear of the lake.',
     tmpl() { return [[0, 0, 0, B.STONE], [1, 0, 0, B.STONE], [0, 1, 0, B.STONE], [0, 0, 1, B.STONE], [2, 0, 2, B.LOG], [2, 1, 2, B.LOG], [2, 2, 2, B.LOG], [1, 2, 2, B.PLANK], [0, 2, 2, B.PLANK]]; } },
   storehouse: { name: 'Storehouse', w: 3, d: 3, cost: { wood: 40 }, era: 1, hours: 6, drop: true, desc: 'Holds +150 of each resource and gives workers a closer drop-off point.',
     tmpl() { const c = []; for (let y = 0; y < 2; y++) for (let x = 0; x < 3; x++) for (let z = 0; z < 3; z++) {
@@ -212,7 +212,7 @@ function footprintInfo(type, x0, z0) {
     hs.push(gt); mn = Math.min(mn, gt); mx = Math.max(mx, gt); sum += gt;
   }
   if (bad) return { bad };
-  if (mx - mn > (type === 'tower' ? 1 : 2)) return { bad: 'Ground is too steep — flatten it with Raise/Lower Land' };
+  if (mx - mn > (type === 'tower' ? 1 : 2)) return { bad: 'The ground here is too steep. Flatten it with Raise or Lower Land.' };
   hs.sort((a, b) => a - b);
   const base = hs[hs.length >> 1] + 1;
   if (type === 'dock') {
@@ -224,7 +224,7 @@ function footprintInfo(type, x0, z0) {
     if (!(t === B.STONE || t === B.ORE || base >= 19)) return { bad: 'Mines need rocky or high ground (try the mountain)' };
   }
   const top = def.tmpl(base).reduce((m, c) => Math.max(m, c[1]), 0);
-  if (base + top >= H - 1) return { bad: 'Too high — it would hit the lid' };
+  if (base + top >= H - 1) return { bad: 'Too tall to fit under the lid here' };
   if (G && G.blds.length && !def.walk) { // don't let a building cut the village apart
     const saved = []; for (let z = z0; z < z0 + def.d; z++) for (let x = x0; x < x0 + def.w; x++) { saved.push(walkOK[x + z * W]); walkOK[x + z * W] = 0; }
     labelComponents();
@@ -233,7 +233,7 @@ function footprintInfo(type, x0, z0) {
     const reach = ringCells(x0, z0, def.w, def.d, 1).some(c => inMain(c[0], c[1]));
     let k = 0; for (let z = z0; z < z0 + def.d; z++) for (let x = x0; x < x0 + def.w; x++) walkOK[x + z * W] = saved[k++];
     labelComponents();
-    if (!ok) return { bad: `That would cut off the ${BDEF[who.type].name} — villagers couldn\u2019t reach it` };
+    if (!ok) return { bad: `That would block the path to the ${BDEF[who.type].name}` };
     if (!reach) return { bad: 'Villagers couldn\u2019t reach this spot' };
   }
   return { base };
@@ -754,7 +754,7 @@ function hourly() {
       if (sNow === 0) { G.frozen = false; addLog(`Spring of year ${Math.floor(day / 12) + 1}. The ice melts and snowmelt swells the streams.`, 'good');
         for (let i = 0; i < world.v.length; i++) if (world.v[i] === B.ICE) { world.v[i] = B.WATER; G.waterActive.add(i); world.markDirty(i % W, (i / (W * D)) | 0, ((i / W) | 0) % D); }
         for (let k = 0; k < 70; k++) { const x = 4 + (Math.random() * 14 | 0), z = 4 + (Math.random() * 14 | 0); const y = world.topAny(x, z); if (y < H - 2) world.set(x, y + 1, z, B.WATER); } }
-      if (sNow === 1) addLog('Summer. Dry heat — beware of lightning and wildfires.', 'warn');
+      if (sNow === 1) addLog('Summer is here. Dry heat brings lightning and wildfires.', 'warn');
       if (sNow === 2) addLog('Autumn. Crops grow fast and foraging is plentiful. Stockpile food for winter.');
       assignJobs();
     }
