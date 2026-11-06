@@ -83,7 +83,11 @@
   .seg button:hover { color: var(--bone); }
   .seg button.on { background: var(--brass); color: #2a2110; }
   #btn-pause.on { color: var(--amber); background: rgba(242, 189, 85, 0.14); }
-  #volume { width: 76px; accent-color: var(--brass); margin: 0 6px; }
+  .volwrap { position: relative; }
+  .volpop { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); padding: 10px 12px; border-radius: 12px; display: none; z-index: 7; }
+  .volwrap::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 10px; }
+  .volwrap:hover .volpop, .volwrap:focus-within .volpop { display: block; }
+  #volume { width: 120px; accent-color: var(--brass); display: block; }
 
   /* ---------- goals ---------- */
   #goals { top: 112px; left: 16px; width: 252px; padding: 14px 16px; overflow-y: auto; scrollbar-width: thin; }
@@ -271,9 +275,9 @@
   body.hide-ui .hud { display: none !important; }
   #hud-res.compact .chip { min-width: 0; padding: 6px 9px 8px 6px; } #hud-res.compact .chip .n { display: none; } #hud-res.compact .rule { margin: 8px 2px; }
   #hud-res.tiny { padding: 4px; gap: 0; } #hud-res.tiny .chip { padding: 5px 5px 8px 4px; gap: 4px; } #hud-res.tiny .chip img, #hud-res.tiny .chip svg.ic { width: 17px; height: 17px; } #hud-res.tiny .chip .v { font-size: 13px; } #hud-res.tiny .meter { left: 5px; right: 5px; }
-  body.narrow #hud-dial .txt, body.narrow #volume, body.narrow #tabs .hint { display: none; }
+  body.narrow #hud-dial .txt, body.narrow #tabs .hint { display: none; }
   body.narrow #hud-dial { padding: 6px; border-radius: 48px; } body.narrow #dial { width: 52px; height: 52px; }
-  body.narrow .ib { width: 34px; height: 34px; } body.narrow .seg button { min-width: 30px; height: 28px; }
+  body.narrow .ib { width: 32px; height: 32px; } body.narrow .ib svg { width: 16px; height: 16px; } body.narrow .seg button { min-width: 28px; height: 26px; font-size: 11.5px; } body.narrow #hud-ctl { gap: 2px; padding: 5px; } body.narrow #btn-help { display: none; }
   body.narrow #slots { min-width: 0; } body.narrow .slot { width: 70px; } body.narrow .tool2 { height: 40px; padding: 0 10px 0 8px; } body.narrow .tool2 kbd { display: none; }
   body.narrow #tray { padding: 0 6px 6px; } body.narrow #tabs { padding: 6px 2px 4px; } body.narrow #tabs button { padding: 6px 8px 8px; font-size: 12.5px; } body.narrow #tabs button.on::after { left: 8px; right: 8px; }
   body.short #goals .req { margin: 4px 0; } body.short #goals .sub { display: none; }
@@ -301,8 +305,7 @@
   <button class="ib" id="btn-save" title="Save or load (Ctrl+S)"></button>
   <button class="ib" id="btn-center" title="Recenter view (R)"></button>
   <button class="ib" id="btn-music" title="Music"></button>
-  <button class="ib" id="btn-sound" title="Mute (M)"></button>
-  <input id="volume" type="range" min="0" max="100" value="70" aria-label="Volume">
+  <div class="volwrap"><button class="ib" id="btn-sound" title="Mute (M)"></button><div class="volpop glass"><input id="volume" type="range" min="0" max="100" value="70" aria-label="Volume"></div></div>
   <button class="ib" id="btn-help" title="Controls (?)"></button>
 </div>
 
@@ -2267,6 +2270,7 @@ const UI = {
     $('goals').addEventListener('click', e => { if (e.target.id === 'btn-era') advanceEra(); else if (e.target.closest('.gh')) { this.goalsOpen = !this.goalsOpen; $('goals').classList.toggle('closed', !this.goalsOpen); this.layout(); } });
     this.goalsOpen = innerWidth >= 700; $('goals').classList.toggle('closed', !this.goalsOpen);
     addEventListener('resize', () => this.layout());
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.layout());
     $('insp').addEventListener('click', e => this.inspClick(e));
     const side = document.querySelectorAll('.tool2');
     side[0].innerHTML = `${SVGI.cursor}Select<kbd>Esc</kbd>`; side[1].innerHTML = `${SVGI.hammer}Demolish<kbd>X</kbd>`;
@@ -2417,8 +2421,11 @@ const UI = {
     const room = c.left - d.right - 2 * GAP; let wrapped = false;
     if (rw > room) { res.classList.add('compact'); rw = R(res).width; if (rw > room) wrapped = true; }
     if (wrapped && rw > vw - 2 * M) { res.classList.add('tiny'); rw = R(res).width; }
-    const rTop = wrapped ? Math.max(d.bottom, c.bottom) + GAP : M;
-    const rLeft = wrapped ? Math.max(M, (vw - rw) / 2) : clamp((vw - rw) / 2, d.right + GAP, c.left - GAP - rw);
+    let rTop = M, rLeft = clamp((vw - rw) / 2, d.right + GAP, c.left - GAP - rw);
+    if (wrapped) { // tuck it under the controls, right-aligned; only drop below the dial if it can't fit beside it
+      rTop = c.bottom + GAP; rLeft = vw - M - rw;
+      if (rLeft < d.right + GAP && rTop < d.bottom) { rTop = Math.max(d.bottom, c.bottom) + GAP; rLeft = Math.max(M, (vw - rw) / 2); }
+    }
     res.style.left = rLeft + 'px'; res.style.top = rTop + 'px';
     const rr = { left: rLeft, right: rLeft + rw, bottom: rTop + R(res).height };
     const topBand = Math.max(d.bottom, c.bottom, rr.bottom);

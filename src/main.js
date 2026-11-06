@@ -156,6 +156,7 @@ const UI = {
     $('goals').addEventListener('click', e => { if (e.target.id === 'btn-era') advanceEra(); else if (e.target.closest('.gh')) { this.goalsOpen = !this.goalsOpen; $('goals').classList.toggle('closed', !this.goalsOpen); this.layout(); } });
     this.goalsOpen = innerWidth >= 700; $('goals').classList.toggle('closed', !this.goalsOpen);
     addEventListener('resize', () => this.layout());
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.layout());
     $('insp').addEventListener('click', e => this.inspClick(e));
     const side = document.querySelectorAll('.tool2');
     side[0].innerHTML = `${SVGI.cursor}Select<kbd>Esc</kbd>`; side[1].innerHTML = `${SVGI.hammer}Demolish<kbd>X</kbd>`;
@@ -306,8 +307,11 @@ const UI = {
     const room = c.left - d.right - 2 * GAP; let wrapped = false;
     if (rw > room) { res.classList.add('compact'); rw = R(res).width; if (rw > room) wrapped = true; }
     if (wrapped && rw > vw - 2 * M) { res.classList.add('tiny'); rw = R(res).width; }
-    const rTop = wrapped ? Math.max(d.bottom, c.bottom) + GAP : M;
-    const rLeft = wrapped ? Math.max(M, (vw - rw) / 2) : clamp((vw - rw) / 2, d.right + GAP, c.left - GAP - rw);
+    let rTop = M, rLeft = clamp((vw - rw) / 2, d.right + GAP, c.left - GAP - rw);
+    if (wrapped) { // tuck it under the controls, right-aligned; only drop below the dial if it can't fit beside it
+      rTop = c.bottom + GAP; rLeft = vw - M - rw;
+      if (rLeft < d.right + GAP && rTop < d.bottom) { rTop = Math.max(d.bottom, c.bottom) + GAP; rLeft = Math.max(M, (vw - rw) / 2); }
+    }
     res.style.left = rLeft + 'px'; res.style.top = rTop + 'px';
     const rr = { left: rLeft, right: rLeft + rw, bottom: rTop + R(res).height };
     const topBand = Math.max(d.bottom, c.bottom, rr.bottom);
