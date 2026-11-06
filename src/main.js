@@ -99,6 +99,7 @@ const SVGI = {
   note: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6.2a1 1 0 0 1 .78-.98l9-2A1 1 0 0 1 20 4.2v11.3" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="6.5" cy="17.5" rx="3" ry="2.4"/><ellipse cx="17.5" cy="15.5" rx="3" ry="2.4"/></svg>',
   center: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="7.5"/></svg>',
   save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
   house: '<svg class="ic" viewBox="0 0 26 26"><path d="M4 12.5L13 5l9 7.5" fill="none" stroke="#d6b266" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 11.5V21h13v-9.5" fill="#3a4a35" stroke="#d6b266" stroke-width="1.6"/><rect x="11" y="15" width="4" height="6" fill="#f2bd55"/></svg>',
   rain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 15a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" fill="currentColor" stroke="none" opacity=".85"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></svg>',
@@ -769,7 +770,7 @@ const SaveUI = {
       h += `</div><div class="sacts">`;
       if (inGame && !(G && G.over) && slot !== 'auto') h += `<button data-s="save" data-slot="${slot}" class="${arm ? 'arm' : 'primary'}">${arm ? 'Replace it?' : meta ? 'Save here' : 'Save'}</button>`;
       if (meta) h += `<button data-s="load" data-slot="${slot}">Load</button>`;
-      if (meta && slot !== 'auto') h += `<button data-s="del" data-slot="${slot}" class="del" aria-label="Delete ${name}">${SVGI.close}</button>`;
+      if (meta) h += `<button data-s="del" data-slot="${slot}" class="del" aria-label="Delete ${name}">${SVGI.trash}Delete</button>`;
       h += `</div></div>`;
     }
     h += `</div>${inGame ? '' : ''}`;
@@ -777,6 +778,7 @@ const SaveUI = {
   },
   click(e) {
     const b = e.target.closest('button'); if (!b) return; const a = b.dataset.s, slot = b.dataset.slot;
+    if (a !== 'del') for (const d of $('saves').querySelectorAll('.del.arm')) { d.classList.remove('arm'); d.innerHTML = `${SVGI.trash}Delete`; }
     SND.play('click', { volume: 0.45 });
     if (a === 'close') return this.close();
     if (a === 'save') {
@@ -795,7 +797,7 @@ const SaveUI = {
       } catch (err) { console.error(err); UI.toast(err.message || 'That save couldn’t be loaded'); }
       return;
     }
-    if (a === 'del') { if (b.classList.contains('arm')) { Saves.remove(slot); this.render(); refreshStart(); } else { b.classList.add('arm'); b.innerHTML = 'Delete?'; } }
+    if (a === 'del') { if (b.classList.contains('arm')) { Saves.remove(slot); UI.toast(slot === 'auto' ? 'Autosave deleted' : `Slot ${slot} deleted`); this.render(); refreshStart(); if (this.mode === 'start' && !Saves.latest()) this.close(); } else { b.classList.add('arm'); b.innerHTML = `${SVGI.trash}Yes, delete`; } }
   },
 };
 function afterLoad() {
