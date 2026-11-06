@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terrarium — Civilization in a Glass Tank</title>
+<style>
+  :root { --panel: rgba(14, 16, 22, 0.78); --line: rgba(255, 255, 255, 0.08); --accent: #5294ff; --text: #eef1f6; --good: #7bd88f; --warn: #f2c14e; --bad: #ff6b6b; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0d12; color: var(--text);
+    font: 13px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif; user-select: none; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; backdrop-filter: blur(8px); }
+  #title { top: 14px; left: 14px; padding: 10px 14px; max-width: 300px; }
+  #title h1 { margin: 0; font-size: 15px; letter-spacing: 0.12em; font-weight: 700; }
+  #hud { opacity: 0.7; font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  #res { top: 14px; left: 50%; transform: translateX(-50%); padding: 5px 8px; display: flex; gap: 2px; align-items: center; }
+  .rc { display: flex; align-items: center; gap: 4px; padding: 3px 8px 3px 4px; border-radius: 9px; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
+  .rc canvas { width: 22px; height: 22px; }
+  .rc small { display: block; font-size: 9px; opacity: 0.5; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; }
+  .rc.full { background: rgba(242, 193, 78, 0.2); color: #ffe7b0; }
+  .rc.warn { background: rgba(255, 107, 107, 0.22); color: #ffd0d0; }
+  .rsep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 4px; }
+  #top { top: 14px; right: 14px; padding: 6px; display: flex; gap: 6px; align-items: center; }
+  button { font: inherit; color: var(--text); background: rgba(255, 255, 255, 0.07); border: 0; border-radius: 9px;
+    padding: 7px 12px; cursor: pointer; transition: background 0.12s, transform 0.12s; }
+  button:hover { background: rgba(255, 255, 255, 0.16); }
+  button.active { background: rgba(82, 148, 255, 0.55); }
+  .sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 2px; }
+  #volume { width: 70px; accent-color: var(--accent); }
+  #goals { top: 86px; left: 14px; padding: 10px 14px; width: 230px; }
+  #goals .era { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.55; }
+  #goals .gt { font-weight: 700; margin: 2px 0 6px; }
+  .gi { display: flex; gap: 6px; align-items: baseline; opacity: 0.75; font-size: 12.5px; }
+  .gi span { width: 12px; text-align: center; }
+  .gi em { margin-left: auto; font-style: normal; opacity: 0.6; font-variant-numeric: tabular-nums; }
+  .gi.ok { opacity: 1; color: var(--good); }
+  #btn-era { margin-top: 8px; width: 100%; background: var(--accent); font-weight: 700; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(82, 148, 255, 0.3); } }
+  .danger { color: var(--bad); font-weight: 700; margin-top: 6px; }
+  .bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin: 4px 0 6px; }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+  #log { position: fixed; left: 16px; bottom: 96px; width: 330px; pointer-events: none; display: flex; flex-direction: column-reverse; gap: 3px; }
+  #log div { background: rgba(14, 16, 22, 0.62); padding: 4px 9px; border-radius: 8px; font-size: 12px; border-left: 3px solid rgba(255,255,255,0.2); width: fit-content; max-width: 100%; }
+  #log .good { border-color: var(--good); } #log .warn { border-color: var(--warn); } #log .bad { border-color: var(--bad); color: #ffdada; }
+  #insp { top: 70px; right: 14px; width: 240px; padding: 12px 14px; display: none; }
+  #insp h3 { margin: 0; font-size: 15px; }
+  #insp .sub { opacity: 0.6; font-size: 12px; margin-bottom: 8px; }
+  #insp .row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 2px 0; opacity: 0.9; }
+  #insp .row b { font-weight: 600; text-align: right; }
+  #insp .names { font-size: 11.5px; opacity: 0.55; margin-bottom: 4px; }
+  #insp .btns { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  #insp .btns button { flex: 1; padding: 6px 8px; font-size: 12px; }
+  button.danger { background: rgba(255, 107, 107, 0.25); color: #ffdada; margin: 0; }
+  .short { color: var(--bad); }
+  #bar { bottom: 16px; left: 50%; transform: translateX(-50%); padding: 8px; display: flex; gap: 8px; align-items: center; max-width: calc(100vw - 20px); }
+  #tools { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; align-items: center; }
+  .gsep { width: 1px; height: 34px; background: var(--line); margin: 0 4px; flex: none; }
+  .tool { width: 46px; height: 46px; padding: 0; display: grid; place-items: center; flex: none; position: relative; }
+  .tool canvas { width: 38px; height: 38px; transition: transform 0.12s; }
+  .tool:hover canvas { transform: translateY(-2px); }
+  .tool.active { box-shadow: inset 0 0 0 2px rgba(150, 195, 255, 0.95); background: rgba(82, 148, 255, 0.28); }
+  .tool .key { position: absolute; top: 1px; left: 4px; font-size: 9px; opacity: 0.45; }
+  .tool.locked canvas { filter: grayscale(1) brightness(0.5); }
+  .tool .lock { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8.5px; text-align: center; opacity: 0.8; letter-spacing: 0.04em; text-transform: uppercase; }
+  #size { display: flex; align-items: center; gap: 4px; padding-left: 8px; border-left: 1px solid var(--line); }
+  #size button { width: 30px; height: 30px; padding: 0; font-size: 16px; }
+  #size-box { text-align: center; min-width: 38px; }
+  #size-val { font-size: 18px; font-weight: 700; display: block; line-height: 1; }
+  #size-box small { opacity: 0.5; font-size: 10px; letter-spacing: 0.1em; }
+  #tip { bottom: 90px; transform: translateX(-50%); padding: 8px 12px; border-radius: 10px; opacity: 0; transition: opacity 0.12s; pointer-events: none; width: 320px; }
+  #tip.show { opacity: 1; }
+  #tip .cost { opacity: 0.85; font-size: 12px; margin-left: 6px; } #tip .cost .short { color: var(--bad); }
+  #tip .tag { font-size: 11px; background: rgba(255,255,255,0.1); border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+  #tip .desc { opacity: 0.7; font-size: 12px; margin-top: 3px; }
+  #toast { top: 74px; left: 50%; transform: translateX(-50%); padding: 7px 14px; border-radius: 10px; opacity: 0; transition: opacity 0.2s; pointer-events: none; color: #ffe2c2; }
+  #toast.show { opacity: 1; }
+  #banner { position: fixed; z-index: 4; top: 22%; left: 50%; transform: translate(-50%, -10px); text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s, transform 0.6s; text-shadow: 0 2px 16px rgba(0,0,0,0.6); }
+  #banner.show { opacity: 1; transform: translate(-50%, 0); }
+  #banner h3 { margin: 0; font-size: 34px; letter-spacing: 0.08em; font-weight: 700; }
+  #banner p { margin: 4px 0 0; opacity: 0.85; font-size: 15px; }
+  #help { top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 18px 22px; display: none; min-width: 380px; z-index: 5; }
+  #help.open { display: block; }
+  #help h2 { margin: 0 0 10px; font-size: 15px; }
+  #help table { border-collapse: collapse; }
+  #help td { padding: 3px 14px 3px 0; vertical-align: top; }
+  #help td:first-child { opacity: 0.6; white-space: nowrap; }
+  #help p { opacity: 0.75; max-width: 420px; margin: 10px 0 0; font-size: 12.5px; }
+  kbd { background: rgba(255, 255, 255, 0.1); border-radius: 4px; padding: 0 5px; font: 12px ui-monospace, monospace; }
+  #start, #end { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(10, 14, 24, 0.45), rgba(5, 6, 10, 0.9));
+    transition: opacity 0.5s; z-index: 10; }
+  #start.gone { opacity: 0; pointer-events: none; }
+  #end { display: none; } #end.open { display: grid; }
+  .card { text-align: center; max-width: 500px; padding: 30px; }
+  .card h2 { font-size: 32px; margin: 0 0 8px; letter-spacing: 0.04em; }
+  .card p { opacity: 0.78; margin: 0 0 18px; }
+  .card .eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.6; margin-bottom: 6px; }
+  .card.lose h2 { color: #ffb4a8; } .card.win h2 { color: #ffe08a; }
+  .card button { font-size: 17px; padding: 12px 34px; background: var(--accent); border-radius: 12px; margin: 4px; }
+  .card button.ghost { background: rgba(255,255,255,0.1); }
+  .card button:hover { transform: translateY(-1px); background: #6aa4ff; }
+  .card .feats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; text-align: left; font-size: 12.5px; opacity: 0.8; margin: 0 auto 22px; max-width: 420px; }
+  .stats { display: flex; justify-content: center; gap: 18px; margin: 0 0 22px; }
+  .stats div { display: flex; flex-direction: column; } .stats b { font-size: 22px; } .stats span { font-size: 11px; opacity: 0.6; }
+  #error { position: fixed; inset: 20px; background: #2a0d10; color: #ffd6d6; border-radius: 12px; padding: 20px; white-space: pre-wrap;
+    font: 13px ui-monospace, monospace; display: none; z-index: 20; overflow: auto; }
+  #error.open { display: block; }
+  body.hide-ui .panel, body.hide-ui #log { display: none !important; }
+  @media (max-width: 1100px) { #goals { top: auto; bottom: 96px; left: auto; right: 14px; } #log { width: 260px; } }
+  @media (max-width: 760px) { #title, #log, #volume { display: none; } #res { top: 62px; } #top { left: 10px; right: 10px; overflow-x: auto; } #goals { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="title" class="panel"><h1>TERRARIUM</h1><div id="hud"></div></div>
+<div id="res" class="panel">
+  <div class="rc" id="rc-food" title="Food — each villager eats twice a day"><span id="ri-food"></span><div><small>Food</small><span id="rv-food">0</span></div></div>
+  <div class="rc" id="rc-wood" title="Wood"><span id="ri-wood"></span><div><small>Wood</small><span id="rv-wood">0</span></div></div>
+  <div class="rc" id="rc-stone" title="Stone"><span id="ri-stone"></span><div><small>Stone</small><span id="rv-stone">0</span></div></div>
+  <div class="rc" id="rc-ore" title="Ore"><span id="ri-ore"></span><div><small>Ore</small><span id="rv-ore">0</span></div></div>
+  <div class="rc" id="rc-favor" title="Favor — earned from happy villagers and priests; spent on god powers"><span id="ri-favor"></span><div><small>Favor</small><span id="rv-favor">0</span></div></div>
+  <span class="rsep"></span>
+  <div class="rc" id="rc-pop" title="Population / housing"><span id="ri-pop"></span><div><small>People</small><span id="rv-pop">0</span></div></div>
+  <div class="rc" id="rc-mood" title="Average mood. If it stays below 22% for a full day, your civilization collapses."><div><small>Mood</small><span id="rv-mood">–</span></div></div>
+</div>
+<div id="top" class="panel">
+  <button id="btn-pause">Pause</button>
+  <button id="btn-speed">Time ×1</button>
+  <span class="sep"></span>
+  <button id="btn-sound">Sound on</button>
+  <input id="volume" type="range" min="0" max="100" value="70" title="Volume">
+  <button id="btn-help">?</button>
+</div>
+<div id="goals" class="panel"></div>
+<div id="log"></div>
+<div id="insp" class="panel"></div>
+<div id="toast" class="panel"></div>
+<div id="banner"></div>
+
+<div id="tip" class="panel"></div>
+<div id="bar" class="panel">
+  <div id="tools"></div>
+  <div id="size">
+    <button id="size-minus" title="Smaller brush ([)">−</button>
+    <div id="size-box"><span id="size-val">2</span><small>SIZE</small></div>
+    <button id="size-plus" title="Bigger brush (])">+</button>
+  </div>
+</div>
+
+<div id="help" class="panel">
+  <h2>Controls</h2>
+  <table>
+    <tr><td>Left mouse</td><td>Use the selected tool (hold to paint land)</td></tr>
+    <tr><td>Right drag / Alt+drag</td><td>Orbit camera</td></tr>
+    <tr><td>Middle drag · Wheel</td><td>Pan · Zoom</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>0</kbd>, <kbd>Shift</kbd>+digit</td><td>Pick tools 1–10 / 11–20</td></tr>
+    <tr><td><kbd>[</kbd> <kbd>]</kbd> · Ctrl+wheel</td><td>Brush size</td></tr>
+    <tr><td><kbd>Space</kbd> · <kbd>T</kbd></td><td>Pause · change speed</td></tr>
+    <tr><td><kbd>F</kbd></td><td>Follow the selected villager</td></tr>
+    <tr><td><kbd>R</kbd> · <kbd>C</kbd></td><td>Reset camera · auto orbit</td></tr>
+    <tr><td><kbd>M</kbd> · <kbd>H</kbd> · <kbd>Esc</kbd></td><td>Mute · hide interface · cancel tool</td></tr>
+  </table>
+  <p>Villagers choose their own jobs: build a workplace and someone will staff it. Each person eats twice a day. Winter freezes the lake and kills crops, and people without a home can freeze. Keep mood above 22% or your people will abandon you. Happy villagers earn Favor, which pays for god powers.</p>
+</div>
+
+<div id="start">
+  <div class="card">
+    <h2>Terrarium</h2>
+    <p>A tiny civilization in a glass tank. Guide your tribe from a campfire to a town, survive floods, wildfires and winter — and raise a tower to the lid of the world.</p>
+    <div class="feats"><div>🏕 Build homes and workplaces</div><div>🍞 Keep everyone fed</div><div>❄ Stockpile for winter</div><div>⚡ Use god powers wisely</div><div>🌊 Floods &amp; 🔥 wildfires</div><div>🗼 Win: build the Great Tower</div></div>
+    <button>Play</button>
+  </div>
+</div>
+<div id="end"></div>
+<div id="error"></div>
+
+<script>
+/*__SCRIPT__*/
+</script>
+</body>
+</html>
