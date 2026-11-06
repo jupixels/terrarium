@@ -759,7 +759,7 @@ function hourly() {
       assignJobs();
     }
   }
-  if (h === 6) rollWeather();
+  if (h === 6) { rollWeather(); if (typeof onNewDay === 'function' && G.t > 7) onNewDay(); }
   // weather schedule
   const W8 = G.dayWeather;
   if (W8) {

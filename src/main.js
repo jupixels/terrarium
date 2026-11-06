@@ -98,6 +98,7 @@ const SVGI = {
   hammer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4M12.5 7.5l-8 8a1.4 1.4 0 0 0 2 2l8-8"/><path d="M11 4.5c2-1.5 4.5-1.5 6.5.5l2 2-3 3-1.5-1.5"/></svg>',
   note: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6.2a1 1 0 0 1 .78-.98l9-2A1 1 0 0 1 20 4.2v11.3" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="6.5" cy="17.5" rx="3" ry="2.4"/><ellipse cx="17.5" cy="15.5" rx="3" ry="2.4"/></svg>',
   center: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="7.5"/></svg>',
+  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
   house: '<svg class="ic" viewBox="0 0 26 26"><path d="M4 12.5L13 5l9 7.5" fill="none" stroke="#d6b266" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 11.5V21h13v-9.5" fill="#3a4a35" stroke="#d6b266" stroke-width="1.6"/><rect x="11" y="15" width="4" height="6" fill="#f2bd55"/></svg>',
   rain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 15a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8a3.5 3.5 0 0 1 0 7z" fill="currentColor" stroke="none" opacity=".85"/><path d="M8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></svg>',
@@ -147,6 +148,7 @@ const UI = {
     $('btn-music').innerHTML = SVGI.note; $('btn-music').onclick = () => { SND.setMusic(!SND.musicOn); this.syncCtl(); };
     $('volume').oninput = e => SND.setVol(e.target.value / 100);
     $('btn-help').onclick = () => $('help').classList.toggle('on');
+    $('btn-save').innerHTML = SVGI.save; $('btn-save').onclick = () => SaveUI.open('game');
     $('btn-center').innerHTML = SVGI.center; $('btn-center').onclick = () => resetCam();
     $('help').onclick = () => $('help').classList.remove('on');
     $('size-minus').onclick = () => this.setBrush(this.brush - 1);
@@ -217,9 +219,10 @@ const UI = {
     const e = $('end'); e.className = 'on ' + (o.win ? 'win' : 'lose');
     e.innerHTML = `<div class="card glass framed"><h2>${o.win ? 'Your people reached the sky' : 'Your civilization has collapsed'}</h2><p>${o.reason}</p>
       <div class="stats"><div><b>${day + 1}</b><span>days</span></div><div><b>${ERAS[G.era]}</b><span>era</span></div><div><b>${s.peak}</b><span>peak population</span></div><div><b>${s.built}</b><span>buildings</span></div><div><b>${s.deaths}</b><span>lost</span></div></div>
-      <div class="btns">${o.win ? '<button id="btn-watch">Keep watching</button>' : ''}<button id="btn-again" class="primary">Start a new valley</button></div></div>`;
+      <div class="btns">${o.win ? '<button id="btn-watch">Keep watching</button>' : ''}${!o.win && Saves.latest() ? '<button id="btn-load">Load a save</button>' : ''}<button id="btn-again" class="primary">Start a new valley</button></div></div>`;
     $('btn-again').onclick = () => { e.className = ''; startGame((Math.random() * 1e6) | 0); };
     if ($('btn-watch')) $('btn-watch').onclick = () => { e.className = ''; };
+    if ($('btn-load')) $('btn-load').onclick = () => { e.className = ''; SaveUI.open('game'); };
   },
   drawDial() {
     const h = hourOf(), dd = dayOf(), yf = ((dd % 12) + h / 24) / 12, se = seasonOf();
@@ -487,6 +490,8 @@ addEventListener('blur', () => { inp.eHeld = false; });
 addEventListener('keydown', e => {
   if (!started || e.target.tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === 's') { e.preventDefault(); SaveUI.open('game'); return; }
+  if ($('saves').classList.contains('on')) { if (k === 'escape') SaveUI.close(); return; }
   if (e.code.startsWith('Digit')) { const n = +e.code.slice(5); const id = UI.catItems()[n - 1]; if (id) { const b = document.querySelector(`.slot[data-tool="${id}"]`); b && b.click(); } return; }
   if (k === 'tab') { e.preventDefault(); const i = CATS.findIndex(c => c.id === UI.cat); UI.cat = CATS[(i + (e.shiftKey ? CATS.length - 1 : 1)) % CATS.length].id; UI.buildToolbar(); return; }
   if (k === 'e') { if (!e.repeat) { inp.eHeld = true; inp.paintT = 0; useTool(true); } return; }
@@ -702,6 +707,7 @@ function frame(now) {
       const env = environment(); setBackground(env);
       buildDynamic(env, G.paused ? 0 : rdt, rdt);
       R.draw(cam, env, collectLights(env), dyn, dynT);
+      if (UI.thumbReq) { const cb = UI.thumbReq; UI.thumbReq = null; cb(SaveUI.makeThumb()); }
       if (started) {
         uiT += rdt; if (uiT > 0.2) { uiT = 0; UI.update(); }
         const nt = env.night, quiet = G.rain || G.storm ? 0.3 : 1;
@@ -719,9 +725,101 @@ try {
   UI.init();
   requestAnimationFrame(frame);
 } catch (e) { showError(e); }
-$('start').querySelector('button').onclick = async () => {
-  $('start').classList.add('gone'); document.body.classList.remove('pre'); started = true; SND.init();
-  startGame((Math.random() * 1e6) | 0);
-  UI.banner('The Camp era', 'Build shelter, find food, and get through your first winter.');
+// ===================== saving UI =====================
+const SaveUI = {
+  mode: 'game', pendingOverwrite: null, wasPaused: false, lastThumb: null,
+  thumb(cb) { UI.thumbReq = cb; },
+  makeThumb() {
+    try { const c = document.createElement('canvas'); c.width = 200; c.height = 125; const g = c.getContext('2d');
+      const sw = canvas.width, sh = canvas.height, ar = 200 / 125; let w = sw * 0.72, h = w / ar; if (h > sh * 0.8) { h = sh * 0.8; w = h * ar; }
+      g.fillStyle = '#4a4550'; g.fillRect(0, 0, 200, 125); g.drawImage(canvas, (sw - w) / 2, (sh - h) / 2 + sh * 0.04, w, h, 0, 0, 200, 125);
+      return c.toDataURL('image/jpeg', 0.72); } catch (e) { return null; }
+  },
+  autosave(withThumb) {
+    if (!started || !G || G.over) return;
+    const go = t => { if (t) this.lastThumb = t; Saves.write('auto', t || this.lastThumb); };
+    if (withThumb) this.thumb(go); else go(null);
+  },
+  label(m) { return `${ERAS[m.era]} era, ${SEASONS[m.season].toLowerCase()} of year ${m.year}`; },
+  when(t) {
+    const d = new Date(t), now = new Date(), time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (d.toDateString() === now.toDateString()) return `today at ${time}`;
+    const y = new Date(now); y.setDate(now.getDate() - 1); if (d.toDateString() === y.toDateString()) return `yesterday at ${time}`;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ` at ${time}`;
+  },
+  open(mode) {
+    this.mode = mode; this.pendingOverwrite = null;
+    if (mode === 'game' && G) { this.wasPaused = G.paused; G.paused = true; UI.syncCtl(); }
+    if (mode === 'game') this.thumb(t => { this.freshThumb = t; this.render(); }); else this.render();
+    $('saves-bg').classList.add('on'); $('saves').classList.add('on');
+  },
+  close() {
+    $('saves-bg').classList.remove('on'); $('saves').classList.remove('on');
+    if (this.mode === 'game' && G && started) { G.paused = this.wasPaused; UI.syncCtl(); }
+  },
+  render() {
+    const inGame = this.mode === 'game';
+    let h = `<button class="iclose" data-s="close" aria-label="Close">${SVGI.close}</button><h2>${inGame ? 'Save or load' : 'Load a game'}</h2><div class="slots">`;
+    for (const { slot, meta } of Saves.list()) {
+      const name = slot === 'auto' ? 'Autosave' : `Slot ${slot}`;
+      const arm = this.pendingOverwrite === slot;
+      h += `<div class="srow ${meta ? '' : 'empty'}"><div class="sthumb">${meta && meta.thumb ? `<img src="${meta.thumb}" alt="">` : ''}</div><div class="sinfo"><div class="sname">${name}</div>`;
+      h += meta ? `<div class="sdesc">${this.label(meta)}</div><div class="smeta">${meta.pop} ${meta.pop === 1 ? 'villager' : 'villagers'}, saved ${this.when(meta.time)}</div>`
+                : `<div class="smeta">${slot === 'auto' ? 'Saves every morning and when you close the page' : 'Empty'}</div>`;
+      h += `</div><div class="sacts">`;
+      if (inGame && !(G && G.over) && slot !== 'auto') h += `<button data-s="save" data-slot="${slot}" class="${arm ? 'arm' : 'primary'}">${arm ? 'Replace it?' : meta ? 'Save here' : 'Save'}</button>`;
+      if (meta) h += `<button data-s="load" data-slot="${slot}">Load</button>`;
+      if (meta && slot !== 'auto') h += `<button data-s="del" data-slot="${slot}" class="del" aria-label="Delete ${name}">${SVGI.close}</button>`;
+      h += `</div></div>`;
+    }
+    h += `</div>${inGame ? '' : ''}`;
+    $('saves').innerHTML = h;
+  },
+  click(e) {
+    const b = e.target.closest('button'); if (!b) return; const a = b.dataset.s, slot = b.dataset.slot;
+    SND.play('click', { volume: 0.45 });
+    if (a === 'close') return this.close();
+    if (a === 'save') {
+      if (Saves.meta(slot) && this.pendingOverwrite !== slot) { this.pendingOverwrite = slot; return this.render(); }
+      this.pendingOverwrite = null;
+      if (Saves.write(slot, this.freshThumb || this.lastThumb)) { UI.toast(`Saved to slot ${slot}`); SND.play('complete', { volume: 0.5 }); } else UI.toast('Couldn’t save: this browser’s storage is full or turned off');
+      return this.render();
+    }
+    if (a === 'load') {
+      const data = Saves.read(slot); if (!data) { UI.toast('That save couldn’t be read'); return; }
+      try {
+        if (!started) beginSession();
+        restoreGame(data); afterLoad();
+        this.mode = 'game'; this.close(); G.paused = false; UI.syncCtl();
+        UI.toast(`Loaded ${slot === 'auto' ? 'the autosave' : 'slot ' + slot}`);
+      } catch (err) { console.error(err); UI.toast(err.message || 'That save couldn’t be loaded'); }
+      return;
+    }
+    if (a === 'del') { if (b.classList.contains('arm')) { Saves.remove(slot); this.render(); refreshStart(); } else { b.classList.add('arm'); b.innerHTML = 'Delete?'; } }
+  },
 };
+function afterLoad() {
+  R.remeshAll(); rainDrops.length = 0; G.particles = []; G.bolts = [];
+  UI.sel = null; UI.follow = false; UI.cat = 'homes'; UI.setTool('inspect'); UI.logDirty = true; UI.lastLogTop = null;
+  UI.syncCtl(); UI.update();
+}
+function beginSession() { $('start').classList.add('gone'); document.body.classList.remove('pre'); started = true; SND.init(); }
+function refreshStart() {
+  const latest = Saves.latest(), el = $('start-btns');
+  el.innerHTML = latest ? `<button class="play" data-a="continue">Continue</button><div class="sub"><button data-a="new">New game</button><button data-a="load">Load a save</button></div>`
+                        : `<button class="play" data-a="new">Play</button>`;
+  if (latest) el.querySelector('[data-a="continue"]').title = SaveUI.label(latest.meta);
+}
+$('start-btns').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a;
+  if (a === 'new') { beginSession(); startGame((Math.random() * 1e6) | 0); UI.banner('The Camp era', 'Build shelter, find food, and get through your first winter.'); }
+  if (a === 'continue') { const l = Saves.latest(); const data = l && Saves.read(l.slot); try { beginSession(); restoreGame(data); afterLoad(); UI.toast('Welcome back'); } catch (err) { console.error(err); startGame((Math.random() * 1e6) | 0); UI.toast('Your save couldn’t be loaded, so a new valley was started'); } }
+  if (a === 'load') SaveUI.open('start');
+});
+$('saves').addEventListener('click', e => SaveUI.click(e));
+$('saves-bg').addEventListener('click', () => SaveUI.close());
+addEventListener('pagehide', () => SaveUI.autosave(false));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') SaveUI.autosave(false); });
+function onNewDay() { SaveUI.autosave(true); }
+refreshStart();
 window.__T = { get G() { return G; }, comp, get mainComp() { return mainComp; }, astar, walkOK, walkH, updateWalk, simStep, world, placeBuilding, advanceEra, cam, usePower, strike, BDEF, footprintInfo, assignJobs };
